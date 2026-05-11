@@ -1,0 +1,4 @@
+reference/project-scan.json
+*.pyc
+.DS_Store
+node_modules/
