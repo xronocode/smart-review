@@ -1,7 +1,9 @@
-# Review Orchestrator
+# smart-review
 
-Multi-mode code review skill for Kilo / Claude Code. Analyzes context,
-picks the right review mode, and launches specialized subagents.
+Agent-agnostic multi-mode code review skill for **Kilo / Claude Code /
+OpenCode / Codex** (and any runtime that reads the
+[Agent Skills](https://agentskills.io/specification) format). Analyzes
+context, picks the right review mode, and launches specialized subagents.
 
 ## Modes
 
@@ -17,31 +19,60 @@ picks the right review mode, and launches specialized subagents.
 
 ## Install
 
-Copy (or symlink) `skill/` into your Kilo skills directory:
+The skill is one directory (`skill/`). Point your runtime's skills
+directory at it — per-project or global:
+
+| Runtime | Project path | Global path |
+|---------|--------------|-------------|
+| Claude Code | `.claude/skills/smart-review` | `~/.claude/skills/smart-review` |
+| Kilo | `.kilo/skills/smart-review` | `~/.kilo/skills/smart-review` |
+| OpenCode | `.opencode/skills/smart-review` | `~/.config/opencode/skills/smart-review` |
+| Codex | — | `~/.codex/skills/smart-review` |
 
 ```bash
-# per-project
-ln -s $(pwd)/skill .kilo/skills/review-orchestrator
-
-# global
-ln -s $(pwd)/skill ~/.kilo/skills/review-orchestrator
+git clone https://github.com/xronocode/smart-review.git
+ln -s $(pwd)/smart-review/skill ~/.claude/skills/smart-review   # example: Claude Code, global
 ```
 
-Or add to `kilo.json`:
+Kilo alternative — register in `kilo.json`:
 
 ```json
 {
-  "skills": ["./skills/review-orchestrator/skill"]
+  "skills": ["./skills/smart-review/skill"]
 }
 ```
+
+Notes for non-Claude runtimes:
+
+- The `model:` pins (`opus` / `sonnet`) in `agents/*.md` are honored by
+  Claude Code and ignored elsewhere.
+- Slash commands (`/smart-review:update`) exist in Claude Code and Kilo.
+  In other runtimes ask the agent directly: *"update the skill references
+  following skill/commands/update.md"*.
 
 ## Update references
 
 ```
-/review-orchestrator:update          # stale only (>7 days)
-/review-orchestrator:update --all    # force all
-/review-orchestrator:update simplifier  # single source
+/smart-review:update          # stale only (>7 days)
+/smart-review:update --all    # force all
+/smart-review:update simplifier  # single source
 ```
+
+## Security
+
+What this skill can do when loaded: read files, run `git diff`, and
+launch review subagents (Read/Grep/Glob/Bash). Auto-fix is opt-in —
+without pre-approval it only reports.
+
+The update command fetches remote documents from an **allowlist of two
+domains** (`raw.githubusercontent.com/anthropics/*`, `docs.anthropic.com`),
+treats fetched text as untrusted data (never as instructions), and
+requires explicit confirmation before changing agent prompt files.
+Details: [skill/commands/update.md](skill/commands/update.md) and
+[SECURITY.md](SECURITY.md).
+
+Found something? Report it privately:
+[security advisory](https://github.com/xronocode/smart-review/security/advisories/new).
 
 ## Structure
 
@@ -49,7 +80,7 @@ Or add to `kilo.json`:
 skill/
 ├── SKILL.md                   # entry point — orchestrator
 ├── commands/
-│   └── update.md              # /review-orchestrator:update
+│   └── update.md              # /smart-review:update
 ├── agents/
 │   ├── project-scanner.md
 │   ├── excellence-reviewer.md

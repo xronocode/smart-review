@@ -1,6 +1,6 @@
 SKILL_DIR := skill
 
-.PHONY: validate update-tree check-freshness
+.PHONY: validate update-tree check-freshness check-links
 
 validate:
 	@echo "=== Checking structure ==="
@@ -32,4 +32,19 @@ now=datetime.date.today(); \
 stale=[d for d in dates if (now-datetime.date.fromisoformat(d)).days>7]; \
 print(f'Total sources: {len(dates)}'); \
 print(f'Stale (>7 days): {len(stale)}'); \
-sys.exit(1 if stale else 0)" || echo "⚠️  Stale references detected — run /review-orchestrator:update"
+sys.exit(1 if stale else 0)" || echo "⚠️  Stale references detected — run /smart-review:update"
+
+check-links:
+	@echo "=== Checking upstream URLs ==="
+	@urls=$$(grep -rhoE 'https://[a-zA-Z0-9._/?=&%-]+' README.md $(SKILL_DIR)/reference/index.md | sort -u); \
+	fail=0; \
+	for url in $$urls; do \
+		code=$$(curl -s -o /dev/null -w '%{http_code}' -L --max-time 20 "$$url"); \
+		if [ "$$code" -ge 400 ]; then \
+			echo "FAIL: $$url -> HTTP $$code"; \
+			fail=1; \
+		else \
+			echo "$$url -> $$code"; \
+		fi; \
+	done; \
+	exit $$fail
