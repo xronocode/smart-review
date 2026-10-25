@@ -32,6 +32,9 @@
 | cpp | reference/cpp.md | local (derived from best practices) | 2026-05-10 |
 | css | reference/css-less-sass.md | local (derived from best practices) | 2026-05-10 |
 | qt | reference/qt.md | local (derived from best practices) | 2026-05-10 |
+| security | reference/security-review-guide.md | local (ported from awesome-skills/code-review-skill) | 2026-10-25 |
+| performance | reference/performance-review-guide.md | local (ported from awesome-skills/code-review-skill) | 2026-10-25 |
+| architecture | reference/architecture-review-guide.md | local (ported from awesome-skills/code-review-skill) | 2026-10-25 |
 
 ## Generated (local scan)
 
