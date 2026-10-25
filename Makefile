@@ -1,4 +1,4 @@
-SKILL_DIR := skill
+SKILL_DIR := skills/smart-review
 
 .PHONY: validate update-tree check-freshness check-links
 

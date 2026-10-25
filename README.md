@@ -1,9 +1,86 @@
 # smart-review
 
-Agent-agnostic multi-mode code review skill for **Kilo / Claude Code /
-OpenCode / Codex** (and any runtime that reads the
-[Agent Skills](https://agentskills.io/specification) format). Analyzes
-context, picks the right review mode, and launches specialized subagents.
+**Structured, multi-pass code review for any coding agent — free, local, private.**
+
+One command installs it into Claude Code, Codex, OpenCode, Kilo, Cursor, Gemini
+CLI and 70+ other agents. After that, "review my changes" in your agent stops
+being a single generic glance: smart-review reads the diff, picks the right
+review mode, runs specialized review passes, and returns one prioritized report.
+
+```markdown
+📊 Changes: 12 files, ~340 lines (feature, medium, high-risk)
+   Flags: types, errors
+⚙️  Recommended: full+errors → excellence → failure-hunt → simplify
+
+## Review Summary
+**Files reviewed:** 12 · **Findings:** 3 blocking, 5 important, 2 nits, 1 suggestion
+
+### Blocking
+- `src/auth.ts:47` — race condition in token refresh (excellence)
+- `src/payments.ts:112` — no error handler for declined card (failure-hunt)
+```
+
+## Why not just ask the agent to "review my code"?
+
+You can — and you get one shallow pass where security, dead code and naming
+land in the same wall of text, with a different shape every run. smart-review
+makes review a repeatable pipeline:
+
+| | bare prompt | smart-review |
+|---|---|---|
+| Depth | one pass, whatever the model feels like | mode auto-picked from diff size / type / risk — quick sanity check to full-project audit |
+| Coverage | general | specialized passes: excellence, swallowed errors, simplification, single-focus deep dives (security, perf, types, …) |
+| Report | free-form, new format every run | severity-labeled findings (`blocking` / `important` / `nit` / `suggestion` / `praise`), deduped across passes |
+| Consistency | mood-dependent | same checklist every run, with language guides for TS, Python, Rust, Go, C/C++, Java, React, Vue, CSS, Qt |
+
+And versus cloud reviewers:
+
+| | smart-review | CodeRabbit / Qodo / Greptile |
+|---|---|---|
+| Runs | your agent, your model, your machine | vendor cloud |
+| Cost | free, MIT | subscription |
+| Scope | any git repo, terminal, pre-commit, whole-codebase audit | GitHub/GitLab PRs on hosted plans |
+| Privacy | code never leaves your machine/subscription | code goes to the vendor |
+
+The trade-off is honest: hosted reviewers ship deep PR integration (inline
+comments, dashboards) and their own tuned models. smart-review gives you
+structure and specialized passes inside the agent you already pay for.
+
+## Install (30 seconds)
+
+Requires Node ≥ 22.20:
+
+```bash
+npx skills add xronocode/smart-review
+```
+
+Pick **smart-review** and your agent(s). Project-scoped by default; `-g`
+installs globally. One agent, no prompts:
+
+```bash
+npx skills add xronocode/smart-review -s smart-review -a claude-code -y
+```
+
+Then tell your agent *"review my changes"* — the skill loads on review
+requests. In pipelines it runs non-interactive: auto-selects the recommended
+mode and prints the report without pausing.
+
+**No npx?** The skill is a plain directory — copy or symlink `skills/smart-review/`
+into your agent's skills folder:
+
+| Agent | Project | Global |
+|-------|---------|--------|
+| Claude Code | `.claude/skills/` | `~/.claude/skills/` |
+| Codex, Cursor, Gemini CLI | `.agents/skills/` | `~/.agents/skills/` |
+| OpenCode | `.agents/skills/` | `~/.config/opencode/skills/` |
+| Kilo Code | `.agents/skills/` | `~/.kilo/skills/` |
+
+(Paths for 70+ more agents: [vercel-labs/skills docs](https://github.com/vercel-labs/skills/blob/main/docs/agents.md).)
+
+Notes for non-Claude runtimes: `model:` pins in `agents/*.md` are honored by
+Claude Code and ignored elsewhere; slash commands exist in Claude Code and
+Kilo — elsewhere ask the agent directly: *"update the skill references
+following skills/smart-review/commands/update.md"*.
 
 ## Modes
 
@@ -17,40 +94,16 @@ context, picks the right review mode, and launches specialized subagents.
 | `failure-hunt` | failure-hunt | Suspicion of swallowed errors |
 | `full-project` | project-scanner → excellence → failure-hunt → simplify | Whole-codebase audit |
 
-## Install
+## How it works
 
-The skill is one directory (`skill/`). Point your runtime's skills
-directory at it — per-project or global:
+1. **Classify** — the orchestrator runs `git diff`, scores size / type / risk,
+   and flags markers (new types, error-handling changes, test changes).
+2. **Recommend** — it proposes a mode and waits for your yes (or your override).
+3. **Review** — specialized subagents run in sequence, each with its own
+   checklist; findings accumulate into one deduplicated list with severity labels.
+4. **Report** — one consolidated summary: blocking first, praise included.
 
-| Runtime | Project path | Global path |
-|---------|--------------|-------------|
-| Claude Code | `.claude/skills/smart-review` | `~/.claude/skills/smart-review` |
-| Kilo | `.kilo/skills/smart-review` | `~/.kilo/skills/smart-review` |
-| OpenCode | `.opencode/skills/smart-review` | `~/.config/opencode/skills/smart-review` |
-| Codex | — | `~/.codex/skills/smart-review` |
-
-```bash
-git clone https://github.com/xronocode/smart-review.git
-ln -s $(pwd)/smart-review/skill ~/.claude/skills/smart-review   # example: Claude Code, global
-```
-
-Kilo alternative — register in `kilo.json`:
-
-```json
-{
-  "skills": ["./skills/smart-review/skill"]
-}
-```
-
-Notes for non-Claude runtimes:
-
-- The `model:` pins (`opus` / `sonnet`) in `agents/*.md` are honored by
-  Claude Code and ignored elsewhere.
-- Slash commands (`/smart-review:update`) exist in Claude Code and Kilo.
-  In other runtimes ask the agent directly: *"update the skill references
-  following skill/commands/update.md"*.
-
-## Update references
+## Updating references
 
 ```
 /smart-review:update          # stale only (>7 days)
@@ -60,16 +113,15 @@ Notes for non-Claude runtimes:
 
 ## Security
 
-What this skill can do when loaded: read files, run `git diff`, and
-launch review subagents (Read/Grep/Glob/Bash). Auto-fix is opt-in —
-without pre-approval it only reports.
+What the skill can do when loaded: read files, run `git diff`, and launch
+review subagents. Auto-fix is opt-in — without pre-approval it only reports.
 
 The update command fetches remote documents from an **allowlist of two
 domains** (`raw.githubusercontent.com/anthropics/*`, `docs.anthropic.com`),
-treats fetched text as untrusted data (never as instructions), and
-requires explicit confirmation before changing agent prompt files.
-Details: [skill/commands/update.md](skill/commands/update.md) and
-[SECURITY.md](SECURITY.md).
+treats fetched text as untrusted data (never as instructions), and requires
+explicit confirmation before changing agent prompt files. Details:
+[skills/smart-review/commands/update.md](skills/smart-review/commands/update.md)
+and [SECURITY.md](SECURITY.md).
 
 Found something? Report it privately:
 [security advisory](https://github.com/xronocode/smart-review/security/advisories/new).
@@ -77,7 +129,7 @@ Found something? Report it privately:
 ## Structure
 
 ```
-skill/
+skills/smart-review/
 ├── SKILL.md                   # entry point — orchestrator
 ├── commands/
 │   └── update.md              # /smart-review:update
@@ -89,7 +141,6 @@ skill/
 │   └── silent-failure-hunter.md
 └── reference/
     ├── index.md               # source registry + freshness dates
-    ├── project-scan.json      # auto-generated project scan cache
     ├── anthropic-prompting.md
     ├── anthropic-opus47.md
     └── ...language guides
