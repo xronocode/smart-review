@@ -1,7 +1,7 @@
 ---
-name: review-orchestrator
+name: smart-review
 description: |
-  Orchestrates code review by analyzing context and launching the right
+  Smart code review orchestrator that analyzes context and launches the right
   subagent combination.  Modes: full (excellence + simplify),
   full+errors, excellence, simplify, targeted, failure-hunt, full-project.
   Use when: reviewing PRs, post-implementation cleanup, pre-commit checks,
@@ -64,7 +64,7 @@ If ANY source is > 7 days old:
 ⚠️  Stale references detected:
    - simplifier (8 days old)
    - anthropic-prompting (12 days old)
-💡 Run /review-orchestrator:update to refresh, or type 'skip' to continue.
+ 💡 Run /smart-review:update to refresh, or type 'skip' to continue.
 ```
 
 Wait for user response:

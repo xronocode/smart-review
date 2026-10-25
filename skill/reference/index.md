@@ -1,6 +1,6 @@
 # Reference Index
 
-> Auto-managed by `/review-orchestrator:update`.
+> Auto-managed by `/smart-review:update`.
 > Manual edits allowed for adding new sources.
 
 ## Agent Prompts (upstream)
@@ -43,5 +43,5 @@
 
 - **Stale threshold**: 7 days
 - On review start the orchestrator checks each source the active agents will use.
-- If any source is stale the orchestrator prints a warning and suggests `/review-orchestrator:update`.
+- If any source is stale the orchestrator prints a warning and suggests `/smart-review:update`.
 - Project scan cache is separate: re-scanned automatically when stale.

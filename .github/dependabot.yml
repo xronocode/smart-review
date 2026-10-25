@@ -1,0 +1,13 @@
+# Only the CI workflow's pinned actions are dependencies here.
+# Security updates are opened immediately regardless of schedule.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: chore
+    labels:
+      - dependencies

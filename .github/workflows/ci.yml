@@ -1,0 +1,47 @@
+# CI for a prompt-only repo: structural validation, link freshness,
+# and a secret scan of git history. No build, no CodeQL — there is no
+# executable code in this repository to analyze.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Structure check
+        run: make validate
+      - name: Reference freshness (informational)
+        # Dates in reference/index.md are refreshed by end-users running
+        # /smart-review:update in their installs; in this repo they age
+        # by design. Report, do not fail.
+        run: make check-freshness || true
+
+  links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check upstream URLs
+        run: make check-links
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Scan git history for secrets
+        run: |
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.30.1 \
+            detect --source /repo --verbose --redact
