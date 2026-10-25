@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.2.0 — 2026-10-25
+
+One-command install via the ecosystem `skills` CLI, and a README that
+explains what the skill is for.
+
+- **`npx skills add xronocode/smart-review`** — the skill now lives at
+  `skills/smart-review/`, the layout the [vercel-labs/skills](https://github.com/vercel-labs/skills)
+  CLI discovers natively: one command installs into Claude Code, Codex,
+  OpenCode, Kilo and 70+ other agents (project or global, symlink or copy).
+- **README rewritten**: what it is vs a bare "review my code" prompt and vs
+  cloud reviewers (CodeRabbit/Qodo), example report, 30-second quickstart.
+- Manual-install matrix aligned with the skills CLI agent paths.
+
 ## v1.1.0 — 2026-10-25
 
 Security hardening and repo infrastructure; no changes to review modes.
