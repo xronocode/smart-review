@@ -1,4 +1,4 @@
-<GraceChangeSpec graceVersion="4.0" status="approved">
+<GraceChangeSpec graceVersion="4.0" status="applied">
   <C-REPO-AUDIT-V1>
     <Summary>Add a commit-bound repository audit beside the existing diff review: a smart-audit skill with recon, five rubric-driven audits, a finding verification pass, and a dependency-free Node CLI that scores, lints, diffs, and renders audit results.</Summary>
     <Problem>smart-review answers "what is wrong with this change" but cannot answer "what state is this repository in at this commit". Its project mode has no evidence contract, no reproducible score, no machine check of the result, and no comparison between runs, so a whole-repository verdict depends on model mood and cannot be trusted or gated in CI.</Problem>

@@ -1,4 +1,4 @@
-<GraceChangePlan graceVersion="4.0" status="approved">
+<GraceChangePlan graceVersion="4.0" status="applied">
   <C-REPO-AUDIT-V1>
     <IntentSummary>Add the smart-audit skill, its rubrics, a dependency-free scoring/lint/diff/report CLI with tests, and a thin Claude Code plugin wrapper, without changing the smart-review skill.</IntentSummary>
     <BaselineAssertions>
