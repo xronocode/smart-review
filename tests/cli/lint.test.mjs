@@ -192,6 +192,7 @@ test('a previous finding must be still present or explained', () => {
     const diff = read(join(run2.runDir, 'diff.json'));
     assert.deepEqual(diff.audits.security.items.map((i) => [i.key, i.status]), [['sample-finding-1', 'still-present'], ['sample-finding-2', 'fixed']]);
     assert.equal(diff.audits.security.delta, 6);
+    assert.equal(diff.audits.security.comparable, true);
     assert.equal(read(join(out, 'index.json')).runs.length, 2);
   } finally {
     r.cleanup();

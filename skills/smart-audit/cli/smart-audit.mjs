@@ -13,7 +13,7 @@ import { existsSync, realpathSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { CliError, TOOL_VERSION, parseArgs, readJson, writeJson, skillRoot } from './lib/util.mjs';
-import { computeScore, SCORING_VERSION, WEIGHTS, CAPS } from './lib/score.mjs';
+import { computeScore, SCORING_VERSION, WEIGHTS, CAPS, LOW_TOTAL_MAX } from './lib/score.mjs';
 import { lintRun, checkFile, RULES } from './lib/lint.mjs';
 import { diffRuns } from './lib/diff.mjs';
 import { startRun, loadRun } from './lib/run.mjs';
@@ -152,6 +152,7 @@ export function main(argv, out = console.log) {
         scoringVersion: SCORING_VERSION,
         weights: WEIGHTS,
         caps: CAPS,
+        lowTotalMax: LOW_TOTAL_MAX,
         profiles: loadProfiles(),
         audits: listRubrics().map((id) => {
           const r = loadRubric(id);

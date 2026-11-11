@@ -10,15 +10,18 @@
 //   SEVERITIES - severity names from most to least severe
 //   WEIGHTS - points deducted per counted finding of each severity
 //   CAPS - highest score allowed with a critical or a high finding
+//   LOW_TOTAL_MAX - largest total deduction for low findings
 //   BANDS - score bands and their lower bounds
 //   bandOf - band name for a 0-100 value
 //   computeScore - score object for a findings document
 // END_MODULE_MAP
 
-export const SCORING_VERSION = '1';
+export const SCORING_VERSION = '2';
 export const SEVERITIES = ['critical', 'high', 'medium', 'low', 'info'];
 export const WEIGHTS = { critical: 40, high: 15, medium: 6, low: 2, info: 0 };
 export const CAPS = { critical: 39, high: 69 };
+// Low findings together never deduct more than this: less than one high finding.
+export const LOW_TOTAL_MAX = 14;
 export const BANDS = [
   { name: 'good', min: 70 },
   { name: 'fair', min: 40 },
@@ -56,9 +59,12 @@ export function computeScore(doc, accepted = []) {
   let running = 100;
   for (const sev of ['critical', 'high', 'medium', 'low']) {
     if (!counts[sev]) continue;
-    const subtotal = counts[sev] * WEIGHTS[sev];
+    const full = counts[sev] * WEIGHTS[sev];
+    const subtotal = sev === 'low' ? Math.min(full, LOW_TOTAL_MAX) : full;
     running -= subtotal;
-    steps.push({ severity: sev, count: counts[sev], weight: WEIGHTS[sev], subtotal, running: Math.max(0, running) });
+    const step = { severity: sev, count: counts[sev], weight: WEIGHTS[sev], subtotal, running: Math.max(0, running) };
+    if (subtotal < full) step.limited = LOW_TOTAL_MAX;
+    steps.push(step);
   }
   const raw = Math.max(0, running);
   let cap = null;

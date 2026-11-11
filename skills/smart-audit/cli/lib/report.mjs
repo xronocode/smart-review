@@ -11,7 +11,7 @@
 //   renderHtml - self-contained HTML report with light and dark themes
 // END_MODULE_MAP
 import { labels } from './i18n.mjs';
-import { bandOf, WEIGHTS } from './score.mjs';
+import { bandOf, WEIGHTS, LOW_TOTAL_MAX } from './score.mjs';
 import { mean } from './util.mjs';
 
 const SEV_ORDER = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
@@ -37,7 +37,7 @@ function criterionTitle(rubric, id, lang) {
 
 function calcLines(score, L) {
   const lines = [`${L.base}: ${score.base}`];
-  for (const s of score.steps) lines.push(`${L.severity[s.severity]}: ${s.count} × ${s.weight} = −${s.subtotal} → ${s.running}`);
+  for (const s of score.steps) lines.push(`${L.severity[s.severity]}: ${s.count} × ${s.weight}${s.limited ? ` (${L.atMost} ${s.limited})` : ''} = −${s.subtotal} → ${s.running}`);
   if (score.cap) lines.push(`${L.capped}: ${L.capReason[score.cap.reason]} ${score.cap.value}`);
   lines.push(`${L.result}: ${score.value}/100`);
   return lines;
@@ -179,7 +179,7 @@ export function renderHtml({ run, docs, rubrics, summary, diff, lang }) {
     if (doc.unconfirmed.length) h.push(`<h3>${esc(L.unconfirmed)}</h3><ul>${doc.unconfirmed.map((u) => `<li><b>${esc(u.title)}.</b> ${esc(u.note)}</li>`).join('')}</ul>`);
     if (sc) {
       h.push(`<h3>${esc(L.scoreCalc)}</h3><table class="calc"><tr><td>${esc(L.base)}</td><td></td><td>${sc.base}</td></tr>`);
-      for (const s of sc.steps) h.push(`<tr><td><span class="chip ${s.severity}">${esc(L.severity[s.severity])}</span> ${s.count} × ${s.weight}</td><td>−${s.subtotal}</td><td>${s.running}</td></tr>`);
+      for (const s of sc.steps) h.push(`<tr><td><span class="chip ${s.severity}">${esc(L.severity[s.severity])}</span> ${s.count} × ${s.weight}${s.limited ? ` <span class="note">(${esc(L.atMost)} ${s.limited})</span>` : ''}</td><td>−${s.subtotal}</td><td>${s.running}</td></tr>`);
       if (sc.cap) h.push(`<tr><td>${esc(L.capped)}: ${esc(L.capReason[sc.cap.reason])} ${sc.cap.value}</td><td></td><td>${sc.cap.value}</td></tr>`);
       h.push(`<tr class="total"><td>${esc(L.result)}</td><td></td><td>${sc.value}/100</td></tr></table>`);
       if (sc.notCounted.length) h.push(`<p class="note">${esc(L.notCounted)}: ${sc.notCounted.map((n) => `${esc(n.id)} (${esc(L.reason[n.reason])})`).join(', ')}</p>`);
@@ -204,6 +204,6 @@ export function renderHtml({ run, docs, rubrics, summary, diff, lang }) {
     h.push('</section>');
   }
   const w = WEIGHTS;
-  h.push(`<footer>${esc(L.footer)} smart-audit ${esc(run.toolVersion)}, scoring v${esc(run.scoringVersion)}: −${w.critical}/−${w.high}/−${w.medium}/−${w.low} ${esc(L.points)}.</footer></main></body></html>\n`);
+  h.push(`<footer>${esc(L.footer)} smart-audit ${esc(run.toolVersion)}, scoring v${esc(run.scoringVersion)}: −${w.critical}/−${w.high}/−${w.medium}/−${w.low} ${esc(L.points)}, ${esc(L.lowTotal)} ${LOW_TOTAL_MAX}.</footer></main></body></html>\n`);
   return h.join('\n');
 }

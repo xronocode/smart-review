@@ -1,6 +1,6 @@
 ---
 id: security
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Security audit
@@ -70,7 +70,7 @@ Path traversal, symlink following, overwrite of unintended files, executable fil
 Randomness source, algorithm choice, key storage, signature and checksum verification of updates and downloads. 5: platform primitives, verified updates, no home-made schemes.
 
 ### `supply` — Dependency acquisition and build-time execution
-Where the project downloads and runs third-party code outside a lockfile: `npx` or `pipx` without a pinned local tool, `curl | sh`, unpinned CI actions, install scripts enabled by default. 5: everything pinned and verified; tools run from the lockfile.
+Where the project downloads and runs third-party code outside a lockfile: `npx` or `pipx` without a pinned local tool, `curl | sh`, unpinned CI actions, install scripts enabled by default. A runner such as `npx <tool>` or `pnpm dlx` falls back to downloading whatever the registry serves when the tool is not installed locally, even if the tool is a declared dependency: read each script that calls one and check whether it verifies the local install first or forbids the download (`npx --no-install`, `npm exec --no`, a direct `node_modules/.bin` path). Search scripts and tool directories, not only workflows. 5: everything pinned and verified; tools run from the lockfile and cannot fall back to a download.
 
 ### `logging` — Logging and error disclosure
 Secrets or personal data written to logs, stack traces returned to callers. 5: logs name keys and outcomes, not values.

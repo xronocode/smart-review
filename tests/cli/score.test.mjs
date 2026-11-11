@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { computeScore, bandOf, WEIGHTS, CAPS } from '../../skills/smart-audit/cli/lib/score.mjs';
+import { computeScore, bandOf, WEIGHTS, CAPS, LOW_TOTAL_MAX } from '../../skills/smart-audit/cli/lib/score.mjs';
 import { main } from '../../skills/smart-audit/cli/smart-audit.mjs';
 import { validate } from '../../skills/smart-audit/cli/lib/validate.mjs';
 import { finding, findingsDoc, makeRepo, write, SKILL, read } from './helpers.mjs';
@@ -57,6 +57,17 @@ test('an accepted risk removes low and medium deductions only', () => {
   assert.deepEqual(s.notCounted, [{ id: 'F-001', reason: 'accepted-risk' }]);
   const other = computeScore({ audit: 'tests', findings: [finding(1)] }, accepted);
   assert.equal(other.value, 94, 'acceptance is scoped to its audit');
+});
+
+test('low findings together deduct at most the limit', () => {
+  const lows = (n) => Array.from({ length: n }, (_, i) => finding(i + 1, { severity: 'low', key: `low-${i}` }));
+  assert.equal(computeScore(doc(lows(7))).value, 86);
+  assert.equal(computeScore(doc(lows(7))).steps[0].limited, undefined);
+  const many = computeScore(doc(lows(20)));
+  assert.equal(many.value, 100 - LOW_TOTAL_MAX);
+  assert.deepEqual(many.steps, [{ severity: 'low', count: 20, weight: 2, subtotal: 14, running: 86, limited: 14 }]);
+  assert.ok(LOW_TOTAL_MAX < WEIGHTS.high, 'all low findings together weigh less than one high finding');
+  assert.equal(computeScore(doc([f('medium'), ...lows(20)])).value, 80);
 });
 
 test('bands split at 70 and 40', () => {

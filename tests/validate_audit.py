@@ -81,6 +81,9 @@ if formula not in scoring_doc:
 for sev, cap in caps.items():
     if f"min(score, {cap})" not in scoring_doc:
         fail(f"reference/scoring.md does not state the {sev} cap {cap}")
+low_max = re.search(r"LOW_TOTAL_MAX = (\d+)", score_src).group(1)
+if f"low findings together deduct at most {low_max}" not in scoring_doc:
+    fail(f"reference/scoring.md does not state the low-findings limit {low_max}")
 version = re.search(r"SCORING_VERSION = '(\w+)'", score_src).group(1)
 if f"scoring version `{version}`" not in scoring_doc:
     fail("reference/scoring.md does not name the current scoring version")
