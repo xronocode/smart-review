@@ -2,7 +2,12 @@
   <GraphDocuments>
     <GD-MAIN>
       <Path>graph/main.xml</Path>
-      <Owns></Owns>
+      <Owns>
+        <M-AUDIT-CLI />
+        <M-AUDIT-SKILL />
+        <M-AUDIT-RUBRICS />
+        <M-AUDIT-PLUGIN />
+      </Owns>
     </GD-MAIN>
   </GraphDocuments>
 </GraceGraphIndex>

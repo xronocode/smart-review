@@ -6,12 +6,17 @@
 // END_MODULE_CONTRACT
 //
 // START_MODULE_MAP
-//   parseArgs - split argv into positionals and --flags
-//   readJson / writeJson - JSON file IO with stable formatting
-//   git - run a read-only git command in a repository
-//   commitExists / fileAtCommit / lineCountAtCommit - evidence lookups on a commit
-//   isSafeRelPath - reject absolute paths and parent traversal
+//   TOOL_VERSION - version of the CLI
 //   skillRoot - directory of the installed skill
+//   CliError - error class for usage and input problems
+//   parseArgs - split argv into positionals and --flags
+//   readJson - read and parse a JSON file
+//   writeJson - write JSON with stable formatting
+//   git - run a read-only git command in a repository
+//   commitExists - whether a commit is present in a repository
+//   isSafeRelPath - reject absolute paths and parent traversal
+//   lineCountAtCommit - number of lines of a file on a commit, or null
+//   mean - rounded mean of a list of numbers
 // END_MODULE_MAP
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';

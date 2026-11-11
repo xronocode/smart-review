@@ -7,9 +7,12 @@
 //
 // START_MODULE_MAP
 //   SCORING_VERSION - version of the weights and caps below
-//   WEIGHTS / CAPS / BANDS - scoring constants
-//   computeScore - score object for a findings document
+//   SEVERITIES - severity names from most to least severe
+//   WEIGHTS - points deducted per counted finding of each severity
+//   CAPS - highest score allowed with a critical or a high finding
+//   BANDS - score bands and their lower bounds
 //   bandOf - band name for a 0-100 value
+//   computeScore - score object for a findings document
 // END_MODULE_MAP
 
 export const SCORING_VERSION = '1';
