@@ -34,6 +34,7 @@ stands for that command.
   runs/<commit-12>/
     run.json                   commit, branch, audits, rubric versions, previous run, accepted risks
     recon.json                 repository map
+    prior/<audit>.findings.json  findings of an earlier pass on the same commit, kept by `start`
     drafts/<audit>.draft.json  auditor output before verification
     <audit>.findings.json      verified findings, scored by the CLI
     diff.json                  comparison with the previous run
@@ -41,7 +42,8 @@ stands for that command.
     report.md, report.html     human-readable reports
 ```
 
-A run is keyed by commit. Running again on the same commit replaces that run. With `--out`,
+A run is keyed by commit. Running `start` again on the same commit moves the earlier findings
+to `prior/`, removes stale drafts and reports, and the new pass builds on them. With `--out`,
 artifacts go to a directory outside the repository and the repository is left untouched.
 
 The audit writes only inside `<out>`. If `<out>` is inside the repository, tell the user

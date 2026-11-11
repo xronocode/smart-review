@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { main } from '../../skills/smart-audit/cli/smart-audit.mjs';
@@ -102,5 +102,23 @@ test('the report names the repository after its remote, or an explicit name', ()
     assert.equal(start('--name', 'custom'), 'custom');
   } finally {
     r.cleanup();
+  }
+});
+
+test('starting again on the same commit keeps the earlier findings as the prior pass', () => {
+  const fx = finishedRun('en');
+  try {
+    assert.equal(main(['finish', fx.run.runDir, '--repo', fx.repo], quiet), 0);
+    write(join(fx.run.runDir, 'drafts', 'security.draft.json'), {});
+    const lines = [];
+    main(['start', '--repo', fx.repo, '--profile', 'quick'], (l) => lines.push(l));
+    const again = JSON.parse(lines.join('\n'));
+    assert.equal(again.runDir, fx.run.runDir);
+    assert.deepEqual(again.priorPass.sort(), ['dependencies', 'security', 'tests']);
+    assert.equal(read(join(again.runDir, 'prior', 'security.findings.json')).score.value, 69);
+    for (const gone of ['security.findings.json', 'report.html', 'summary.json', 'drafts']) assert.equal(existsSync(join(again.runDir, gone)), false, gone);
+    assert.equal(again.previous, null, 'the same commit is never its own previous run');
+  } finally {
+    fx.cleanup();
   }
 });

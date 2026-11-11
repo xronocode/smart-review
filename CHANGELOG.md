@@ -30,7 +30,7 @@ Review modes and agents of smart-review are unchanged.
 - **`SMART_AUDIT.md` guidance file and `.smart-audit/accepted.json`**, both
   read from the audited commit and treated as untrusted input.
 - **Claude Code plugin manifest** and `/smart-review:audit` command.
-- **CI**: CLI test job (40 tests); `make validate` now checks both skills.
+- **CI**: CLI test job (41 tests); `make validate` now checks both skills.
 - `package.json` (`smart-audit`, private, not published).
 
 ## v1.2.0 — 2026-10-25

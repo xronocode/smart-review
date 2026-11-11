@@ -11,7 +11,7 @@
 //   startRun - create the run directory and run.json, return run metadata and paths
 //   loadRun - read run.json and every findings document of a run directory
 // END_MODULE_MAP
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
 import { join, resolve, basename } from 'node:path';
 import { CliError, TOOL_VERSION, git, readJson, writeJson } from './util.mjs';
 import { SCORING_VERSION } from './score.mjs';
@@ -50,8 +50,8 @@ function repoName(root) {
 // START_CONTRACT: startRun
 //   PURPOSE: Pin an audit run to the repository HEAD commit and record what will be audited.
 //   INPUTS: { repo: string, out?: string, profile?: string, audits?: string[], lang?: string, name?: string, rubricsDir?: string }
-//   OUTPUTS: { runDir: string, run: object }
-//   SIDE_EFFECTS: writes run.json into the run directory
+//   OUTPUTS: { runDir: string, run: object, prior: string[] - audits whose earlier findings on this commit were kept }
+//   SIDE_EFFECTS: writes run.json; moves earlier findings of the same commit into prior/ and removes stale drafts and reports
 // END_CONTRACT: startRun
 export function startRun({ repo, out, profile = 'quick', audits, lang = 'en', name, rubricsDir }) {
   const root = resolve(repo);
@@ -100,8 +100,26 @@ export function startRun({ repo, out, profile = 'quick', audits, lang = 'en', na
     accepted: readAccepted(root, commit),
     guidanceFile,
   };
+  // START_BLOCK_KEEP_PRIOR_PASS
+  // Re-opening a run on the same commit keeps the earlier findings as the prior pass,
+  // so a second pass builds on the first instead of silently replacing it.
+  const prior = [];
+  if (existsSync(runDir)) {
+    const old = readdirSync(runDir).filter((n) => n.endsWith('.findings.json'));
+    if (old.length) {
+      rmSync(join(runDir, 'prior'), { recursive: true, force: true });
+      mkdirSync(join(runDir, 'prior'), { recursive: true });
+      for (const n of old) {
+        renameSync(join(runDir, n), join(runDir, 'prior', n));
+        prior.push(n.slice(0, -'.findings.json'.length));
+      }
+    }
+    for (const n of ['report.md', 'report.html', 'summary.json', 'diff.json']) rmSync(join(runDir, n), { force: true });
+    rmSync(join(runDir, 'drafts'), { recursive: true, force: true });
+  }
+  // END_BLOCK_KEEP_PRIOR_PASS
   writeJson(join(runDir, 'run.json'), run);
-  return { runDir, outRoot, run };
+  return { runDir, outRoot, run, prior };
 }
 
 export function loadRun(runDir) {
