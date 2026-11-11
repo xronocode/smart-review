@@ -25,7 +25,7 @@ const en = {
   checked: 'What was checked', limits: 'Limits', effect: 'Effect on the conclusion', tools: 'Tools',
   toolStatus: { used: 'used', absent: 'not installed', skipped: 'skipped' }, rubric: 'rubric', audits: 'Audits',
   dirty: 'The working tree had uncommitted changes; the audit covers the commit only.',
-  footer: 'Scores are computed by the smart-audit CLI from confirmed findings only.', points: 'points',
+  footer: 'Scores are computed by the smart-audit CLI from confirmed findings only.', points: 'points', atMost: 'at most', lowTotal: 'low findings together at most',
   auditNames: { security: 'Security', tests: 'Tests', dependencies: 'Dependencies', 'ai-readiness': 'AI readiness', hygiene: 'Codebase hygiene' },
 };
 const ru = {
@@ -45,7 +45,7 @@ const ru = {
   checked: 'Что проверено', limits: 'Ограничения', effect: 'Влияние на вывод', tools: 'Инструменты',
   toolStatus: { used: 'использован', absent: 'не установлен', skipped: 'пропущен' }, rubric: 'рубрика', audits: 'Аудиты',
   dirty: 'В рабочей копии были незакоммиченные изменения; аудит относится только к коммиту.',
-  footer: 'Оценки считает CLI smart-audit только по подтверждённым находкам.', points: 'баллов',
+  footer: 'Оценки считает CLI smart-audit только по подтверждённым находкам.', points: 'баллов', atMost: 'не более', lowTotal: 'низкие находки вместе не более',
   auditNames: { security: 'Безопасность', tests: 'Тесты', dependencies: 'Зависимости', 'ai-readiness': 'Готовность к AI', hygiene: 'Гигиена кодовой базы' },
 };
 export function labels(lang) {

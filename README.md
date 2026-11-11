@@ -169,6 +169,7 @@ rules, severity anchors, and criteria.
 ```
 score = 100 − 40·critical − 15·high − 6·medium − 2·low      (never below 0)
 any critical → at most 39        any high → at most 69
+low findings together deduct at most 14
 ```
 
 70–100 good, 40–69 needs work, 0–39 at risk. A repository with a confirmed high-severity

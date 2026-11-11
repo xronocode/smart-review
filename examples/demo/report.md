@@ -246,4 +246,4 @@ Criteria describe the state; they do not change the score.
 
 ---
 
-Scores are computed by the smart-audit CLI from confirmed findings only. smart-audit 0.1.0, scoring v1.
+Scores are computed by the smart-audit CLI from confirmed findings only. smart-audit 0.1.0, scoring v2.

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "audit": "security",
-  "rubricVersion": "1.0.0",
+  "rubricVersion": "1.1.0",
   "commit": "895cffb11905b081ced5bab6d18aff02f854da5a",
   "lang": "en",
   "verdict": "Any caller can read any note and any file under the service directory; fix both before exposing the service.",
@@ -217,7 +217,7 @@
     }
   ],
   "score": {
-    "scoringVersion": "1",
+    "scoringVersion": "2",
     "base": 100,
     "steps": [
       {

@@ -2,14 +2,14 @@
   "commit": "895cffb11905b081ced5bab6d18aff02f854da5a",
   "branch": "main",
   "profile": "quick",
-  "scoringVersion": "1",
+  "scoringVersion": "2",
   "overall": 67,
   "band": "fair",
   "audits": {
     "security": {
       "score": 64,
       "band": "fair",
-      "rubricVersion": "1.0.0",
+      "rubricVersion": "1.1.0",
       "findings": {
         "critical": 0,
         "high": 2,
@@ -22,7 +22,7 @@
     "tests": {
       "score": 69,
       "band": "fair",
-      "rubricVersion": "1.0.0",
+      "rubricVersion": "1.1.0",
       "findings": {
         "critical": 0,
         "high": 1,
@@ -35,7 +35,7 @@
     "dependencies": {
       "score": 69,
       "band": "fair",
-      "rubricVersion": "1.0.0",
+      "rubricVersion": "1.1.0",
       "findings": {
         "critical": 0,
         "high": 1,

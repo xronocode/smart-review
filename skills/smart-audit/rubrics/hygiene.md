@@ -1,6 +1,6 @@
 ---
 id: hygiene
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Codebase hygiene audit
@@ -20,7 +20,8 @@ Out of scope: security impact (security rubric), test quality (test rubric), dep
 1. **Survey tracked files.** Use `git ls-files` on the audited commit: sizes, binary and build output, backup copies, environment files, generated directories that are tracked.
 2. **Check the working surface.** Commands in the manifest, Makefile, or scripts directory; README steps; formatter and linter configuration and whether a command runs them.
 3. **Sample code by size and churn.** Read the largest and most central source files and a sample of ordinary ones. Look for dead code, duplicated logic, mixed responsibilities, swallowed errors, magic values.
-4. **Confirm each lead.** Before reporting code as unused, search for references including dynamic ones (string lookups, registries, reflection, configuration). Before reporting duplication, confirm the copies really do the same job.
+4. **Follow failure paths of operations that matter.** A search for empty catch blocks finds the obvious cases only. Pick the operations that persist user state (settings, permissions, recent files, bookmarks) or change the user's content (paste, drop, import, replace), and read what happens when each fails: is the error reported to anyone, and is a half-applied change rolled back? An ignored result (`let _ =`, a promise without a catch, a callback that drops its error) on such a path, or a failure that leaves the content changed, is evidence for `errors`.
+5. **Confirm each lead.** Before reporting code as unused, search for references including dynamic ones (string lookups, registries, reflection, configuration). Before reporting duplication, confirm the copies really do the same job.
 
 ## Evidence rules
 
@@ -33,7 +34,7 @@ Out of scope: security impact (security rubric), test quality (test rubric), dep
 
 - **critical** — not used in this audit unless the repository cannot be built or understood at all from its tracked state.
 - **high** — the documented build or setup path does not work from a clean clone, or a core area is so entangled that routine changes need coordinated edits across many unrelated places.
-- **medium** — a recurring source of mistakes: widespread swallowed errors in a core path, a large dead subsystem that still looks live, hardcoded machine-specific paths in shared scripts, no enforced formatting on a multi-contributor code base.
+- **medium** — a recurring source of mistakes: widespread swallowed errors in a core path; a failed user operation that silently loses persisted state or leaves the user's content changed without rollback or notice; a large dead subsystem that still looks live; hardcoded machine-specific paths in shared scripts; no enforced formatting on a multi-contributor code base; a mandatory contributor step that cannot be carried out from the repository's own instructions.
 - **low** — local clutter: an unused export, a stale TODO cluster, a backup copy, an inconsistent name, a tracked build artifact.
 
 ## Criteria
@@ -78,7 +79,7 @@ Repeated logic that should be one function; over-general abstractions with one c
 Very large files or modules mixing unrelated concerns; long positional parameter lists.
 
 ### `errors` — Errors are handled, not swallowed
-Empty catch blocks, ignored results, broad catches that hide the cause, missing cleanup on failure.
+Empty catch blocks, ignored results, broad catches that hide the cause, missing cleanup or rollback on failure. Score from the failure paths you followed in step 4, not from a pattern search alone.
 
 ## Optional tools
 

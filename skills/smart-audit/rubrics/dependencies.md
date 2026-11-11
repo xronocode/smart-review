@@ -1,6 +1,6 @@
 ---
 id: dependencies
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Dependency audit
@@ -19,9 +19,10 @@ Out of scope: reading the source of third-party packages; changing versions; run
 
 1. **Inventory every source of third-party code.** Each ecosystem and each manifest: registry packages, git dependencies, vendored directories, downloaded binaries, CI actions, container base images, tools fetched at run time.
 2. **Check reproducibility per source.** Is there a lockfile, is it used by the documented and CI install commands (`npm ci`, `--frozen-lockfile`, `--locked`), are integrity hashes present, are git dependencies pinned to a commit?
-3. **Check acquisition paths outside the lockfile.** Search scripts, Makefiles, and workflows for `npx`, `pnpm dlx`, `pipx run`, `go run pkg@latest`, `curl … | sh`, unpinned actions and images.
-4. **Check install-time execution.** Lifecycle scripts, build scripts, and whether CI disables them where it can.
-5. **Judge fit.** Runtime versus development separation, unused or duplicate packages, abandoned packages on critical paths, declared licenses.
+3. **Check acquisition paths outside the lockfile.** Search scripts, Makefiles, tool directories, and workflows for `npx`, `pnpm dlx`, `pipx run`, `go run pkg@latest`, `cargo install`, `curl … | sh`, unpinned actions and images. For every runner call (`npx <tool>`), open the script and decide which of three cases it is: the tool is undeclared (always a download); the tool is declared and the call cannot download (`--no-install`, `npm exec --no`, a `node_modules/.bin` path, or an explicit check that the local install exists); or the tool is declared but the call silently falls back to a registry download when `node_modules` is absent. The third case is a finding.
+4. **Follow credentials.** For each job or script that holds signing keys, publishing tokens, or deployment credentials, list which third-party code runs in the same job before or while the credential is available: install scripts, build plugins, tools fetched at run time.
+5. **Check install-time execution.** Lifecycle scripts, build scripts, and whether CI disables them where it can.
+6. **Judge fit.** Runtime versus development separation, unused or duplicate packages, abandoned packages on critical paths, declared licenses.
 
 ## Evidence rules
 
@@ -33,9 +34,9 @@ Out of scope: reading the source of third-party packages; changing versions; run
 ## Severity anchors
 
 - **critical** — a dependency or tool on the release or deployment path is fetched unpinned and executed with access to signing keys or deployment credentials.
-- **high** — the primary install path is not reproducible (no lockfile, or the lockfile is not used); an unpinned fetch runs in CI with write permissions; a reachable, known-exploited vulnerable runtime dependency.
-- **medium** — unpinned tool fetch on a developer or test path; git dependency without integrity; install scripts enabled with no review process; an abandoned package on a critical path.
-- **low** — unused or duplicated packages, a development dependency declared as runtime, missing update automation.
+- **high** — the primary install path is not reproducible (no lockfile, or the lockfile is not used); an unpinned fetch runs in CI with write permissions; third-party install or build scripts run unrestricted in the job that holds release signing keys or publishing credentials, when the project restricts them elsewhere or could restrict them here; a reachable, known-exploited vulnerable runtime dependency.
+- **medium** — an undeclared tool fetched on a developer or test path; git dependency without integrity; install scripts enabled with no review process on paths without credentials; an abandoned package on a critical path; a shipped direct dependency whose declared license contradicts the project's own written license policy.
+- **low** — a declared tool called through a runner that can fall back to a download on a developer or test path; unused or duplicated packages; a development dependency declared as runtime; missing update automation; license metadata gaps without a policy conflict.
 
 ## Criteria
 
@@ -81,4 +82,4 @@ Use only if already installed; record each as `used`, `absent`, or `skipped`.
 
 - A package used only through a CLI in scripts or through configuration, reported as unused.
 - A workspace or path dependency reported as unpinned.
-- `npx` that resolves to a locally installed, lockfile-pinned binary. Check that the package is a declared dependency before reporting.
+- `npx` in a CI step that runs after a lockfile install in the same job: the local binary exists there. The fallback matters for scripts a person runs on a machine where the install may be missing.
