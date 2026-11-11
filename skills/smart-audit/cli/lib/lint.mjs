@@ -40,6 +40,7 @@ export const RULES = {
   'PREVIOUS-UNACCOUNTED': 'a finding of the previous run is neither still present nor explained',
   'PREVIOUS-UNKNOWN': 'previous[] names a key the previous run did not have',
   'LOW-CONFIDENCE-SEVERE': 'high or critical finding with low confidence is not scored; confirm it or move it to unconfirmed',
+  'CROSS-AUDIT-DUP': 'two audits report a finding at the same evidence line; keep it in the audit that owns the topic',
   'DIRTY-TREE': 'the working tree had uncommitted changes when the run was opened',
   'HEAD-MOVED': 'repository HEAD is no longer the audited commit',
 };
@@ -183,6 +184,19 @@ export function lintRun({ runDir, repo, rubricsDir }) {
     }
     // END_BLOCK_LINT_PREVIOUS
   }
+  // START_BLOCK_LINT_CROSS_AUDIT
+  const seenAt = new Map();
+  for (const [id, { doc }] of Object.entries(docs)) {
+    for (const f of Array.isArray(doc.findings) ? doc.findings : []) {
+      const e = Array.isArray(f.evidence) && f.evidence[0];
+      if (!e || typeof e.path !== 'string') continue;
+      const at = `${e.path}:${e.line}`;
+      const first = seenAt.get(at);
+      if (first && first.audit !== id) warnings.push({ rule: 'CROSS-AUDIT-DUP', audit: id, message: `${f.id} and ${first.audit} ${first.id} both start at ${at}` });
+      else if (!first) seenAt.set(at, { audit: id, id: f.id });
+    }
+  }
+  // END_BLOCK_LINT_CROSS_AUDIT
   return { errors, warnings };
 }
 

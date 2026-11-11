@@ -31,7 +31,11 @@ checkable.
 - Read-only. The only file you write is `<runDir>/drafts/<audit>.draft.json`.
 - Follow the rubric's method in order. Do not skip its mapping pass.
 - Commands: read-only `git`, file reads, and the rubric's optional tools under the rubric's conditions. No installs, no builds, no network unless the rubric allows it for an already installed tool and the user permitted it.
-- Stay inside your rubric's scope. Leave other topics to their audits.
+- Stay inside your rubric's scope. Leave other topics to their audits. If you notice something that belongs to another audit, mention it in your reply to the orchestrator instead of reporting it.
+- A tool that writes a report file must write it inside `<runDir>/drafts/` or to `/dev/null`, never into the repository or elsewhere.
+- Evidence lines must be inside the audited repository. If you read something outside it to understand behavior (an installed copy of a dependency at the locked version, a toolchain's documentation on disk), do it read-only and say so in `limits`; a finding must still stand on repository lines.
+- When you state a count, say how you counted it, so the verifier can reproduce it.
+- If a shell search unexpectedly returns nothing, confirm with `git grep` before concluding that something is absent.
 - Every finding has evidence lines that exist on the audited commit. Check each path with `git ls-files` or by opening it, and each line number against the file.
 - Do not write `score`. Do not write `verification`.
 - Mask secrets.

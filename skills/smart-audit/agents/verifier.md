@@ -35,6 +35,7 @@ finding that reaches the report is true, correctly rated, and stated once.
 3. Decide:
    - **Holds as stated** → keep; `verification.result: "confirmed"`.
    - **Holds but overstated** → lower the severity to match the rubric anchor and the real precondition; `verification.result: "downgraded"`, and say why in the note.
+   - **Holds but understated** → raise the severity when the rubric anchor clearly applies and you have read the path that makes it so; `verification.result: "upgraded"`, and say why in the note.
    - **Plausible but unproven** → move to `unconfirmed` with what would be needed to confirm it.
    - **Wrong** → remove it. Mention the removal in your reply.
 4. `verification.note` says what you re-read (file and line range) and what you looked for to refute it.
@@ -45,7 +46,8 @@ finding that reaches the report is true, correctly rated, and stated once.
 - Merge findings that share a root cause into one, keeping all evidence lines and the stable `key`.
 - Split a finding that bundles two unrelated causes.
 - Renumber `id`s by severity: `F-001` is the most severe.
-- Check that no finding belongs to another audit's scope.
+- Check that no finding belongs to another audit's scope. Remove one that does and name it in your reply, so the orchestrator can pass it to the owning audit.
+- Recount every number a finding states. Correct it, or drop the number if you cannot reproduce it.
 
 ## Rest of the document
 

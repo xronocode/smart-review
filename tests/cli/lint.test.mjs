@@ -227,3 +227,17 @@ test('check validates a single draft, findings file, or recon map', () => {
   rmSync(reconPath);
   rmSync(join(fx.runDir, 'drafts'), { recursive: true });
 });
+
+test('the same evidence line reported by two audits only warns', () => {
+  const dir = `${fx.runDir}-cross`;
+  cpSync(fx.runDir, dir, { recursive: true });
+  const file = join(dir, 'tests.findings.json');
+  const doc = read(file);
+  doc.findings = [finding(1, { key: 'same-line-other-audit', verification: { result: 'upgraded', note: 'Raised after reading the caller.' } })];
+  write(file, doc);
+  main(['score', dir], quiet);
+  const res = lintRun({ runDir: dir, repo: fx.repo });
+  rmSync(dir, { recursive: true, force: true });
+  assert.deepEqual(res.errors, []);
+  assert.deepEqual(res.warnings.map((w) => [w.rule, w.audit]), [['CROSS-AUDIT-DUP', 'tests']]);
+});
