@@ -1,0 +1,85 @@
+{
+  "id": "dependencies",
+  "version": "1.0.0",
+  "title": {
+    "en": "Dependencies",
+    "ru": "Зависимости"
+  },
+  "question": {
+    "en": "Can this project's dependencies be installed reproducibly and trusted, and which gaps matter most?",
+    "ru": "Можно ли воспроизводимо установить зависимости проекта и доверять им, и какие пробелы важнее всего?"
+  },
+  "scale": 5,
+  "criteria": [
+    {
+      "id": "inventory",
+      "title": {
+        "en": "Dependency sources are inventoried",
+        "ru": "Источники зависимостей учтены"
+      }
+    },
+    {
+      "id": "reproducible",
+      "title": {
+        "en": "Installs are reproducible",
+        "ru": "Установка воспроизводима"
+      }
+    },
+    {
+      "id": "vulnerabilities",
+      "title": {
+        "en": "State of known vulnerabilities",
+        "ru": "Состояние известных уязвимостей"
+      }
+    },
+    {
+      "id": "separation",
+      "title": {
+        "en": "Runtime, build, and test dependencies are separated",
+        "ru": "Рабочие, сборочные и тестовые зависимости разделены"
+      }
+    },
+    {
+      "id": "acquisition",
+      "title": {
+        "en": "Packages and tools are fetched safely",
+        "ru": "Пакеты и инструменты получаются безопасно"
+      }
+    },
+    {
+      "id": "scripts",
+      "title": {
+        "en": "Install and build scripts are controlled",
+        "ru": "Установочные и сборочные скрипты под контролем"
+      }
+    },
+    {
+      "id": "freshness",
+      "title": {
+        "en": "Dependencies are maintained and reasonably current",
+        "ru": "Зависимости сопровождаются и достаточно свежие"
+      }
+    },
+    {
+      "id": "footprint",
+      "title": {
+        "en": "No unused or duplicated dependencies",
+        "ru": "Нет лишних и дублирующих зависимостей"
+      }
+    },
+    {
+      "id": "licenses",
+      "title": {
+        "en": "Declared licenses are compatible",
+        "ru": "Заявленные лицензии совместимы"
+      }
+    },
+    {
+      "id": "updates",
+      "title": {
+        "en": "Updates are a routine process",
+        "ru": "Обновление — регулярный процесс"
+      }
+    }
+  ]
+}

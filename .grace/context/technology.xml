@@ -1,0 +1,13 @@
+<GraceTechnology graceVersion="4.0">
+  <Language>Markdown (skill and agent prompts, rubrics); JavaScript (ES modules) for the scoring and lint CLI; JSON Schema for findings and reports</Language>
+  <Runtime>Host coding agent (Claude Code, Codex, OpenCode, Kilo, and other Agent Skills runtimes); Node.js 22.20 or newer for the CLI, run through npx</Runtime>
+  <Framework>Agent Skills layout discovered by the vercel-labs/skills CLI (skills/NAME/SKILL.md); Claude Code plugin manifest as an optional wrapper; no runtime framework and no third-party npm dependencies in the CLI unless justified</Framework>
+  <TestingStack>make validate for skill structure; node:test for the CLI; golden fixtures (findings.json in, score and lint verdict out); reference audit reports of a known repository at known commits as a recall benchmark</TestingStack>
+  <Observability>No runtime telemetry. Each audit run writes its artifacts (recon map, findings.json, report, lint result) into the audited repository under a dedicated directory, keyed by commit SHA.</Observability>
+  <OperationalConstraints>
+    <Constraint>Prefer existing project libraries and established repository patterns.</Constraint>
+    <Constraint>The CLI must be deterministic and offline: same findings.json gives the same score and lint verdict.</Constraint>
+    <Constraint>Skills must degrade to sequential execution where the host agent has no subagents.</Constraint>
+    <Constraint>CI actions stay pinned by commit SHA with a read-only token, as today.</Constraint>
+  </OperationalConstraints>
+</GraceTechnology>

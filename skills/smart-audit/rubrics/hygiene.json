@@ -1,0 +1,113 @@
+{
+  "id": "hygiene",
+  "version": "1.0.0",
+  "title": {
+    "en": "Codebase hygiene",
+    "ru": "Гигиена кодовой базы"
+  },
+  "question": {
+    "en": "How much avoidable friction does this codebase carry for the next person or agent who changes it?",
+    "ru": "Сколько устранимого трения несёт эта кодовая база для следующего человека или агента, который будет её менять?"
+  },
+  "scale": 5,
+  "criteria": [
+    {
+      "id": "dead-code",
+      "title": {
+        "en": "Unused, disabled, and unreachable code",
+        "ru": "Неиспользуемый, отключённый и недостижимый код"
+      }
+    },
+    {
+      "id": "artifacts",
+      "title": {
+        "en": "Tracked binaries and build output",
+        "ru": "Отслеживаемые бинарные файлы и результаты сборки"
+      }
+    },
+    {
+      "id": "ignore",
+      "title": {
+        "en": "Ignore rules cover generated and local files",
+        "ru": "Правила игнорирования покрывают сгенерированные и локальные файлы"
+      }
+    },
+    {
+      "id": "commands",
+      "title": {
+        "en": "Build and maintenance commands",
+        "ru": "Команды сборки и сопровождения"
+      }
+    },
+    {
+      "id": "onboarding",
+      "title": {
+        "en": "Getting-started documentation",
+        "ru": "Документация для начала работы"
+      }
+    },
+    {
+      "id": "structure",
+      "title": {
+        "en": "Directory structure is understandable",
+        "ru": "Структура каталогов понятна"
+      }
+    },
+    {
+      "id": "env",
+      "title": {
+        "en": "Environment files and machine-specific assumptions",
+        "ru": "Файлы окружения и привязка к конкретной машине"
+      }
+    },
+    {
+      "id": "constants",
+      "title": {
+        "en": "Magic values and hardcoded data",
+        "ru": "Магические значения и зашитые данные"
+      }
+    },
+    {
+      "id": "naming",
+      "title": {
+        "en": "Consistent naming and language",
+        "ru": "Единообразие имён и языка"
+      }
+    },
+    {
+      "id": "leftovers",
+      "title": {
+        "en": "Backup copies and stale markers",
+        "ru": "Резервные копии и устаревшие пометки"
+      }
+    },
+    {
+      "id": "formatting",
+      "title": {
+        "en": "Formatting and linting are enforced",
+        "ru": "Форматирование и линтинг обязательны"
+      }
+    },
+    {
+      "id": "duplication",
+      "title": {
+        "en": "Local simplicity and reuse",
+        "ru": "Локальная простота и повторное использование"
+      }
+    },
+    {
+      "id": "cohesion",
+      "title": {
+        "en": "Modules have one clear responsibility",
+        "ru": "У модулей одна ясная ответственность"
+      }
+    },
+    {
+      "id": "errors",
+      "title": {
+        "en": "Errors are handled, not swallowed",
+        "ru": "Ошибки обрабатываются, а не проглатываются"
+      }
+    }
+  ]
+}

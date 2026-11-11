@@ -1,9 +1,12 @@
 SKILL_DIR := skills/smart-review
+AUDIT_DIR := skills/smart-audit
 
-.PHONY: validate update-tree check-freshness check-links
+.PHONY: validate validate-review validate-audit test update-tree check-freshness check-links
 
-validate:
-	@echo "=== Checking structure ==="
+validate: validate-review validate-audit
+
+validate-review:
+	@echo "=== Checking smart-review structure ==="
 	@test -f $(SKILL_DIR)/SKILL.md || (echo "FAIL: SKILL.md missing" && exit 1)
 	@test -f $(SKILL_DIR)/reference/index.md || (echo "FAIL: reference/index.md missing" && exit 1)
 	@for agent in project-scanner excellence-reviewer code-simplifier targeted-reviewer silent-failure-hunter; do \
@@ -11,6 +14,22 @@ validate:
 	done
 	@test -f $(SKILL_DIR)/commands/update.md || (echo "FAIL: commands/update.md missing" && exit 1)
 	@echo "✅ Structure OK"
+
+validate-audit:
+	@echo "=== Checking smart-audit structure ==="
+	@for f in SKILL.md cli/smart-audit.mjs rubrics/profiles.json \
+		agents/recon.md agents/auditor.md agents/verifier.md \
+		reference/findings-contract.md reference/scoring.md reference/untrusted-input.md reference/run-layout.md \
+		schemas/findings.schema.json schemas/recon.schema.json schemas/run.schema.json; do \
+		test -f $(AUDIT_DIR)/$$f || (echo "FAIL: $(AUDIT_DIR)/$$f missing" && exit 1); \
+	done
+	@test -f .claude-plugin/plugin.json || (echo "FAIL: .claude-plugin/plugin.json missing" && exit 1)
+	@test -f commands/audit.md || (echo "FAIL: commands/audit.md missing" && exit 1)
+	@python3 tests/validate_audit.py $(AUDIT_DIR)
+	@echo "✅ smart-audit structure OK"
+
+test:
+	@node --test "tests/cli/*.test.mjs"
 
 update-tree:
 	@echo "=== Refreshing reference/index.md source tree ==="

@@ -1,0 +1,28 @@
+<GraceRequirements graceVersion="4.0">
+  <ProjectName>smart-review</ProjectName>
+  <Annotation>Agent-agnostic skill pack for structured code review and commit-bound repository audits with evidence-backed findings, deterministic scoring, and machine-verified reports. Runs inside the user's own coding agent; code never leaves their machine or subscription.</Annotation>
+  <Keywords>code review, repository audit, agent skills, Claude Code plugin, findings schema, deterministic scoring, audit lint, evidence verification, npx</Keywords>
+  <Goals>
+    <Goal>Keep the existing multi-mode diff review working unchanged for current users.</Goal>
+    <Goal>Add a repository audit skill: recon, one bounded question per audit, criteria rubric, evidence-backed findings, verification pass, and a report bound to a commit SHA.</Goal>
+    <Goal>Compute every score with a script, never with the model, so a score is explainable and reproducible from findings.json.</Goal>
+    <Goal>Provide a lint command that rejects an audit result when schema, evidence locations, commit, score, or rubric coverage do not check out.</Goal>
+    <Goal>Compare each run with the previous run per finding: fixed, still present, new, or missed earlier.</Goal>
+    <Goal>Produce a human-readable HTML report alongside Markdown and JSON.</Goal>
+    <Goal>Install with one npx command into any supported agent, and as a Claude Code plugin from the same repository.</Goal>
+  </Goals>
+  <Users>
+    <User>Developers and small teams who build with coding agents and want a repeatable health check of their own repositories.</User>
+    <User>Maintainers who run the audit in CI and gate on a score threshold.</User>
+  </Users>
+  <Constraints>
+    <Constraint>Audits are read-only: they never edit the audited repository's source, create branches, or open issues or pull requests. Fixes are a separate, explicitly requested step.</Constraint>
+    <Constraint>Audited repository content, including any guidance file, is untrusted input: it cannot set a score, widen scope, authorize commands, or hide a reachable risk.</Constraint>
+    <Constraint>Secrets found during an audit are masked in every output.</Constraint>
+    <Constraint>No active testing of live websites in the first version.</Constraint>
+    <Constraint>All logic lives in skills and the scoring/lint script so it works in agents without plugins, slash commands, or subagents; the Claude Code plugin stays a thin wrapper.</Constraint>
+    <Constraint>Rubrics, criteria wording, and report texts are original; third-party product names and materials are not used as the product's identity.</Constraint>
+    <Constraint>A report records the rubric version; scores are comparable only within one rubric version.</Constraint>
+    <Constraint>First version scope: recon, a small set of audits (security, tests, dependencies, AI readiness, codebase hygiene), verification pass, scoring, lint, run comparison, HTML report. Autofix, schedules, and further audits come later.</Constraint>
+  </Constraints>
+</GraceRequirements>
