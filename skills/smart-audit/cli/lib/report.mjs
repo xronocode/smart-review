@@ -159,7 +159,7 @@ export function renderHtml({ run, docs, rubrics, summary, diff, lang }) {
   h.push('<div class="grid">');
   for (const [id, a] of Object.entries(summary.audits)) {
     const n = Object.values(a.findings).reduce((x, y) => x + y, 0);
-    h.push(`<a class="tile" href="#${esc(id)}"><b class="${a.band || ''}">${a.score ?? '—'}</b>${esc(name(id))}<br><span>${n} · ${esc(L.findings.toLowerCase())}</span></a>`);
+    h.push(`<a class="tile" href="#${esc(id)}"><b class="${a.band || ''}">${a.score ?? '—'}</b>${esc(name(id))}<br><span>${esc(L.findings)}: ${n}</span></a>`);
   }
   h.push('</div>');
   for (const [id, { doc }] of Object.entries(docs)) {

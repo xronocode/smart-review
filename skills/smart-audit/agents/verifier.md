@@ -56,5 +56,7 @@ finding that reaches the report is true, correctly rated, and stated once.
 
 ## Output
 
-Write `<runDir>/<audit>.findings.json`. Reply with: kept, downgraded, moved to unconfirmed,
+Write `<runDir>/<audit>.findings.json`, then run
+`node <skill-dir>/cli/smart-audit.mjs check <runDir>/<audit>.findings.json --repo <repo>` and fix
+every error it reports. Reply with: kept, downgraded, moved to unconfirmed,
 removed (with one line each for the last three). Do not paste the document.

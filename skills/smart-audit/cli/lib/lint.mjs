@@ -7,6 +7,7 @@
 //
 // START_MODULE_MAP
 //   lintRun - return { errors, warnings } for a run directory
+//   checkFile - check one recon, draft, or findings document on its own
 //   findSecrets - secret-shaped substrings in a text
 //   RULES - rule identifiers and their one-line meaning
 // END_MODULE_MAP
@@ -183,4 +184,62 @@ export function lintRun({ runDir, repo, rubricsDir }) {
     // END_BLOCK_LINT_PREVIOUS
   }
   return { errors, warnings };
+}
+
+// START_CONTRACT: checkFile
+//   PURPOSE: Let an agent check one document before the run is finished: recon.json, a draft, or a findings file.
+//   INPUTS: { file: string, repo: string, rubricsDir?: string }
+//   OUTPUTS: { kind: 'recon' | 'draft' | 'findings', errors: Issue[] } - schema, commit, evidence, and criteria coverage problems
+//   SIDE_EFFECTS: none
+// END_CONTRACT: checkFile
+export function checkFile({ file, repo, rubricsDir }) {
+  const errors = [];
+  const root = resolve(repo);
+  const doc = readJson(file);
+  const schemaDir = join(skillRoot, 'schemas');
+  const base = file.split(/[\\/]/).pop();
+  const add = (rule, message) => errors.push({ rule, audit: base, message });
+  if (base === 'recon.json') {
+    for (const v of validate(doc, readJson(join(schemaDir, 'recon.schema.json')))) add('SCHEMA', `${v.path}: ${v.message}`);
+    if (typeof doc.commit === 'string' && !commitExists(root, doc.commit)) add('RUN-COMMIT', `${doc.commit} not found in ${root}`);
+    return { kind: 'recon', errors };
+  }
+  const draft = base.endsWith('.draft.json');
+  const schema = readJson(join(schemaDir, 'findings.schema.json'));
+  if (draft) schema.$defs.finding.required = schema.$defs.finding.required.filter((k) => k !== 'verification');
+  const violations = validate(doc, schema);
+  for (const v of violations) add('SCHEMA', `${v.path}: ${v.message}`);
+  for (const s of findSecrets(JSON.stringify(doc))) add('SECRET', `${s.kind} (${s.sample})`);
+  if (violations.length) return { kind: draft ? 'draft' : 'findings', errors };
+  if (!commitExists(root, doc.commit)) {
+    add('RUN-COMMIT', `${doc.commit} not found in ${root}`);
+    return { kind: draft ? 'draft' : 'findings', errors };
+  }
+  const rubric = loadRubric(doc.audit, rubricsDir);
+  if (!rubric) add('AUDIT-UNKNOWN', `no shipped rubric "${doc.audit}"`);
+  else {
+    if (doc.rubricVersion !== rubric.version) add('RUBRIC-VERSION', `document ${doc.rubricVersion}, shipped ${rubric.version}`);
+    const have = doc.criteria.map((c) => c.id);
+    for (const c of rubric.criteria) {
+      const n = have.filter((x) => x === c.id).length;
+      if (n !== 1) add('CRITERIA-COVERAGE', `criterion "${c.id}" appears ${n} time(s)`);
+    }
+    for (const id of have) if (!rubric.criteria.some((c) => c.id === id)) add('CRITERIA-COVERAGE', `criterion "${id}" is not in rubric ${doc.audit}@${rubric.version}`);
+  }
+  for (const c of doc.criteria) {
+    if ((c.status === 'scored') !== (c.score !== undefined)) add('CRITERIA-SCORE', `"${c.id}" is ${c.status} ${c.score === undefined ? 'without' : 'with'} a score`);
+  }
+  const ids = new Set();
+  const keys = new Set();
+  for (const [i, f] of doc.findings.entries()) {
+    if (ids.has(f.id)) add('FINDING-DUP', `id ${f.id}`);
+    if (keys.has(f.key)) add('FINDING-DUP', `key ${f.key}`);
+    ids.add(f.id);
+    keys.add(f.key);
+    checkEvidence(f.evidence, `findings[${i}] ${f.id}`, root, doc.commit, add);
+  }
+  for (const [i, u] of doc.unconfirmed.entries()) checkEvidence(u.evidence, `unconfirmed[${i}]`, root, doc.commit, add);
+  if (!doc.limits.length) add('LIMITS-EMPTY', 'state what was not run or not read');
+  if (!doc.checked.length) add('CHECKED-EMPTY', 'state what was actually traced');
+  return { kind: draft ? 'draft' : 'findings', errors };
 }

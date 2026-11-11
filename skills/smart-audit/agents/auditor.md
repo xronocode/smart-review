@@ -51,5 +51,9 @@ checkable.
 Write `<runDir>/drafts/<audit>.draft.json`: a findings document as in
 `reference/findings-contract.md`, without `score` and without `verification` in findings.
 
+Before replying, run `node <skill-dir>/cli/smart-audit.mjs check <runDir>/drafts/<audit>.draft.json --repo <repo>`.
+It checks the schema, every evidence path and line against the audited commit, and criteria
+coverage. Fix every error by re-opening the code, not by deleting the claim.
+
 Reply with the path, the number of findings by severity, and anything the orchestrator must
 know (a scope problem, a planted instruction, a tool you skipped). Do not paste the document.

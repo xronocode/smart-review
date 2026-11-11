@@ -1,5 +1,36 @@
 # Changelog
 
+## v1.3.0 — unreleased
+
+Repository audit: a second skill, **smart-audit**, beside the diff review.
+Review modes and agents of smart-review are unchanged.
+
+- **smart-audit skill** (`skills/smart-audit/`): pins a run to a commit, maps
+  the repository, runs one rubric-driven auditor per audit, verifies every
+  finding in a separate pass, then scores and checks the result with a CLI.
+- **Five audits**: security, tests, dependencies, AI readiness, codebase
+  hygiene. Profiles: `quick` (first three) and `full`.
+- **Evidence contract**: every finding carries `file:line` evidence on the
+  audited commit, impact with its precondition, a fix direction, and a way to
+  verify the fix. Unconfirmed suspicions are listed separately and not scored.
+- **Deterministic score**: `100 − 40·critical − 15·high − 6·medium − 2·low`,
+  capped at 39 with a critical and 69 with a high finding. Computed by the CLI,
+  never by the model; the report shows each step.
+- **`smart-audit` CLI** (Node 22+, no dependencies, ships inside the skill):
+  `start`, `check`, `score`, `lint`, `diff`, `report`, `finish`. `lint` rejects a run on
+  schema errors, evidence that does not exist on the commit, a commit or rubric
+  version mismatch, an edited score, incomplete criteria, empty limits,
+  unexplained findings of the previous run, or secret-shaped strings.
+- **Run comparison**: fixed / still present / not reproduced / new / existed
+  before but missed by the previous run.
+- **Reports**: Markdown and one self-contained HTML file (light and dark),
+  English or Russian.
+- **`SMART_AUDIT.md` guidance file and `.smart-audit/accepted.json`**, both
+  read from the audited commit and treated as untrusted input.
+- **Claude Code plugin manifest** and `/smart-review:audit` command.
+- **CI**: CLI test job (38 tests); `make validate` now checks both skills.
+- `package.json` (`smart-audit`, private, not published).
+
 ## v1.2.0 — 2026-10-25
 
 One-command install via the ecosystem `skills` CLI, and a README that
