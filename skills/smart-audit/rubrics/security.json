@@ -1,0 +1,106 @@
+{
+  "id": "security",
+  "version": "1.0.0",
+  "title": {
+    "en": "Security",
+    "ru": "Безопасность"
+  },
+  "question": {
+    "en": "Which confirmed, reachable security weaknesses exist in this repository at this commit, and which should be fixed first?",
+    "ru": "Какие подтверждённые и достижимые слабости безопасности есть в репозитории на этом коммите и что исправлять первым?"
+  },
+  "scale": 5,
+  "criteria": [
+    {
+      "id": "secrets",
+      "title": {
+        "en": "Secrets and credentials",
+        "ru": "Секреты и учётные данные"
+      }
+    },
+    {
+      "id": "authn",
+      "title": {
+        "en": "Authentication and sessions",
+        "ru": "Аутентификация и сеансы"
+      }
+    },
+    {
+      "id": "authz",
+      "title": {
+        "en": "Authorization and data isolation",
+        "ru": "Авторизация и изоляция данных"
+      }
+    },
+    {
+      "id": "input",
+      "title": {
+        "en": "Input validation at trust boundaries",
+        "ru": "Проверка входных данных на границах доверия"
+      }
+    },
+    {
+      "id": "injection",
+      "title": {
+        "en": "Command, query, and template injection",
+        "ru": "Инъекции в команды, запросы и шаблоны"
+      }
+    },
+    {
+      "id": "rendering",
+      "title": {
+        "en": "Rendering of untrusted content",
+        "ru": "Отображение недоверенного содержимого"
+      }
+    },
+    {
+      "id": "network",
+      "title": {
+        "en": "Outbound requests and cross-origin rules",
+        "ru": "Исходящие запросы и межсайтовые правила"
+      }
+    },
+    {
+      "id": "files",
+      "title": {
+        "en": "File access, import, and export",
+        "ru": "Доступ к файлам, импорт и экспорт"
+      }
+    },
+    {
+      "id": "crypto",
+      "title": {
+        "en": "Cryptography, tokens, and update integrity",
+        "ru": "Криптография, токены и целостность обновлений"
+      }
+    },
+    {
+      "id": "supply",
+      "title": {
+        "en": "Dependency acquisition and build-time execution",
+        "ru": "Получение зависимостей и выполнение кода при сборке"
+      }
+    },
+    {
+      "id": "logging",
+      "title": {
+        "en": "Logging and error disclosure",
+        "ru": "Журналы и раскрытие ошибок"
+      }
+    },
+    {
+      "id": "hardening",
+      "title": {
+        "en": "Platform hardening and security configuration",
+        "ru": "Защитные настройки платформы"
+      }
+    },
+    {
+      "id": "sectests",
+      "title": {
+        "en": "Security regression tests",
+        "ru": "Регрессионные тесты безопасности"
+      }
+    }
+  ]
+}

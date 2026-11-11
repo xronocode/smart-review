@@ -1,0 +1,23 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "smart-review",
+  "owner": {
+    "name": "xronocode",
+    "url": "https://github.com/xronocode"
+  },
+  "metadata": {
+    "description": "Code review and repository audit skills that run inside your own coding agent.",
+    "version": "1.3.0"
+  },
+  "plugins": [
+    {
+      "name": "smart-review",
+      "source": "./",
+      "description": "Structured multi-pass code review and commit-bound repository audit with deterministic scoring.",
+      "version": "1.3.0",
+      "license": "MIT",
+      "keywords": ["code-review", "audit", "security", "tests", "dependencies", "scoring"],
+      "category": "development"
+    }
+  ]
+}

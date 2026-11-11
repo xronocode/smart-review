@@ -1,0 +1,127 @@
+{
+  "id": "tests",
+  "version": "1.0.0",
+  "title": {
+    "en": "Tests",
+    "ru": "Тесты"
+  },
+  "question": {
+    "en": "Would this test suite catch a real regression before release, and can someone else run it?",
+    "ru": "Поймает ли этот набор тестов настоящую регрессию до выпуска и может ли его запустить другой человек?"
+  },
+  "scale": 5,
+  "criteria": [
+    {
+      "id": "purpose",
+      "title": {
+        "en": "Tests target behavior that matters",
+        "ru": "Тесты проверяют значимое поведение"
+      }
+    },
+    {
+      "id": "regression",
+      "title": {
+        "en": "Tests would fail on a real regression",
+        "ru": "Тесты упадут при настоящей регрессии"
+      }
+    },
+    {
+      "id": "assertions",
+      "title": {
+        "en": "Assertions prove outcomes",
+        "ru": "Утверждения доказывают результат"
+      }
+    },
+    {
+      "id": "unit",
+      "title": {
+        "en": "Logic is tested in isolation",
+        "ru": "Логика проверяется изолированно"
+      }
+    },
+    {
+      "id": "integration",
+      "title": {
+        "en": "Component boundaries are exercised",
+        "ru": "Границы компонентов проверяются"
+      }
+    },
+    {
+      "id": "journeys",
+      "title": {
+        "en": "User-visible flows are covered end to end",
+        "ru": "Пользовательские сценарии покрыты сквозными тестами"
+      }
+    },
+    {
+      "id": "failure",
+      "title": {
+        "en": "Error and negative paths",
+        "ru": "Ошибочные и негативные сценарии"
+      }
+    },
+    {
+      "id": "edges",
+      "title": {
+        "en": "Boundary and edge cases",
+        "ru": "Граничные случаи"
+      }
+    },
+    {
+      "id": "state",
+      "title": {
+        "en": "State transitions and ordering-sensitive paths",
+        "ru": "Переходы состояния и чувствительные к порядку пути"
+      }
+    },
+    {
+      "id": "determinism",
+      "title": {
+        "en": "Deterministic and environment-independent",
+        "ru": "Детерминированность и независимость от окружения"
+      }
+    },
+    {
+      "id": "runnable",
+      "title": {
+        "en": "Suite runs from a documented command",
+        "ru": "Набор запускается документированной командой"
+      }
+    },
+    {
+      "id": "coverage",
+      "title": {
+        "en": "Coverage is measured and meaningful",
+        "ru": "Покрытие измеряется и осмысленно"
+      }
+    },
+    {
+      "id": "data",
+      "title": {
+        "en": "Fixtures and test data are explicit and isolated",
+        "ru": "Фикстуры и тестовые данные явные и изолированные"
+      }
+    },
+    {
+      "id": "doubles",
+      "title": {
+        "en": "Test doubles are kept apart from real integration checks",
+        "ru": "Подмены отделены от проверок реальной интеграции"
+      }
+    },
+    {
+      "id": "speed",
+      "title": {
+        "en": "Feedback time is acceptable",
+        "ru": "Время обратной связи приемлемо"
+      }
+    },
+    {
+      "id": "maintainability",
+      "title": {
+        "en": "Test code is maintainable",
+        "ru": "Тестовый код удобно сопровождать"
+      }
+    }
+  ]
+}

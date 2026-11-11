@@ -1,0 +1,14 @@
+{
+  "quick": [
+    "security",
+    "tests",
+    "dependencies"
+  ],
+  "full": [
+    "security",
+    "tests",
+    "dependencies",
+    "ai-readiness",
+    "hygiene"
+  ]
+}

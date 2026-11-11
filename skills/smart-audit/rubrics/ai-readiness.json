@@ -1,0 +1,92 @@
+{
+  "id": "ai-readiness",
+  "version": "1.0.0",
+  "title": {
+    "en": "AI readiness",
+    "ru": "Готовность к AI"
+  },
+  "question": {
+    "en": "Can a coding agent take a task in this repository from request to verified change without tribal knowledge?",
+    "ru": "Может ли кодовый агент довести задачу в этом репозитории от запроса до проверенного изменения без устных знаний команды?"
+  },
+  "scale": 5,
+  "criteria": [
+    {
+      "id": "entry",
+      "title": {
+        "en": "Agent entry instructions exist and are accurate",
+        "ru": "Входные инструкции для агента есть и верны"
+      }
+    },
+    {
+      "id": "context-tech",
+      "title": {
+        "en": "Technical context is written down",
+        "ru": "Технический контекст записан"
+      }
+    },
+    {
+      "id": "context-product",
+      "title": {
+        "en": "Product intent is written down",
+        "ru": "Продуктовый замысел записан"
+      }
+    },
+    {
+      "id": "context-process",
+      "title": {
+        "en": "Working process is written down",
+        "ru": "Рабочий процесс записан"
+      }
+    },
+    {
+      "id": "task-path",
+      "title": {
+        "en": "A task has a path to a definition of done",
+        "ru": "У задачи есть путь к критериям готовности"
+      }
+    },
+    {
+      "id": "verification",
+      "title": {
+        "en": "Completion is machine-checkable",
+        "ru": "Завершение проверяется машиной"
+      }
+    },
+    {
+      "id": "navigation",
+      "title": {
+        "en": "Code is discoverable without reading everything",
+        "ru": "Код находится без чтения всего репозитория"
+      }
+    },
+    {
+      "id": "portability",
+      "title": {
+        "en": "Guidance works across agents",
+        "ru": "Инструкции работают в разных агентах"
+      }
+    },
+    {
+      "id": "memory",
+      "title": {
+        "en": "Decisions and work state survive between sessions",
+        "ru": "Решения и состояние работы переживают сессию"
+      }
+    },
+    {
+      "id": "safety",
+      "title": {
+        "en": "The environment is safe to set up and run",
+        "ru": "Окружение безопасно поднимать и запускать"
+      }
+    },
+    {
+      "id": "consistency",
+      "title": {
+        "en": "Documentation agrees with the code",
+        "ru": "Документация согласована с кодом"
+      }
+    }
+  ]
+}

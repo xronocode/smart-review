@@ -1,0 +1,67 @@
+<GraceChangeSpec graceVersion="4.0" status="approved">
+  <C-REPO-AUDIT-V1>
+    <Summary>Add a commit-bound repository audit beside the existing diff review: a smart-audit skill with recon, five rubric-driven audits, a finding verification pass, and a dependency-free Node CLI that scores, lints, diffs, and renders audit results.</Summary>
+    <Problem>smart-review answers "what is wrong with this change" but cannot answer "what state is this repository in at this commit". Its project mode has no evidence contract, no reproducible score, no machine check of the result, and no comparison between runs, so a whole-repository verdict depends on model mood and cannot be trusted or gated in CI.</Problem>
+    <Goals>
+      <Goal>Ship skills/smart-audit as a second skill; skills/smart-review keeps its files and behavior.</Goal>
+      <Goal>Recon writes a repository map bound to a commit SHA into the run directory, not into the skill directory.</Goal>
+      <Goal>Five rubrics (security, tests, dependencies, ai-readiness, hygiene), each with one audit question, criteria, evidence rules, exclusions, and a version, in prose plus a machine-readable criteria list.</Goal>
+      <Goal>A separate verification pass re-checks every finding against the code, merges duplicates by root cause, and may downgrade or drop a finding.</Goal>
+      <Goal>CLI command score computes the 0-100 score from findings only; the model never computes a score.</Goal>
+      <Goal>CLI command lint rejects a result on schema errors, evidence locations missing on the audited commit, commit mismatch, score mismatch, incomplete rubric coverage, empty limits, missing or wrong rubric version, unverified findings, unaccounted previous findings, or unmasked secrets.</Goal>
+      <Goal>CLI command diff classifies each finding against the previous run: fixed, still present, new, or missed earlier.</Goal>
+      <Goal>CLI command report renders Markdown and one self-contained HTML file with light and dark themes, in English or Russian.</Goal>
+      <Goal>JSON Schemas for findings, recon, and run metadata ship with the skill.</Goal>
+      <Goal>A guidance file and an accepted-risks file in the audited repository are supported as untrusted input with documented limits.</Goal>
+      <Goal>Quick and full profiles; the audits to run are shown before starting.</Goal>
+      <Goal>A Claude Code plugin manifest wraps the skills with audit commands; all logic stays in skills and CLI.</Goal>
+      <Goal>README, CHANGELOG, and SECURITY.md describe the audit, installation, an example report, limits, and the audit threat model.</Goal>
+    </Goals>
+    <Constraints>
+      <Constraint>Audits are read-only for the audited repository source; run artifacts go to a dedicated directory or an explicit output directory.</Constraint>
+      <Constraint>The CLI is ES modules for Node 22 or newer with no third-party dependencies, deterministic and offline apart from local git.</Constraint>
+      <Constraint>The CLI lives inside the skill directory so it is present after npx skills add, and is also exposed as an npm bin of a scoped package that is not published by this change.</Constraint>
+      <Constraint>Audited repository content, the guidance file, and the accepted-risks file cannot set a score, widen scope, authorize commands, or remove a high or critical finding from the score.</Constraint>
+      <Constraint>Secrets are masked in every output; lint fails on secret-shaped strings.</Constraint>
+      <Constraint>External scanners are used only when already installed; absence is recorded as a limit.</Constraint>
+      <Constraint>Hosts without subagents run the same steps sequentially.</Constraint>
+      <Constraint>Rubrics, criteria wording, and report texts are original; no third-party product is named in repository files.</Constraint>
+      <Constraint>CI actions stay pinned by commit SHA with a read-only token.</Constraint>
+      <Constraint>No private audit material of other repositories is committed; the README example comes from a synthetic repository.</Constraint>
+    </Constraints>
+    <NonGoals>
+      <NonGoal>Autofix, issue or pull request creation, schedules, and recurring runs.</NonGoal>
+      <NonGoal>Active testing of live websites or any network probing.</NonGoal>
+      <NonGoal>Audits beyond the five listed.</NonGoal>
+      <NonGoal>Publishing to npm, pushing, tagging, or opening a pull request.</NonGoal>
+      <NonGoal>Changing review modes, agents, or reference guides of skills/smart-review.</NonGoal>
+      <NonGoal>Installing scanners or system packages.</NonGoal>
+    </NonGoals>
+    <AcceptanceCriteria>
+      <Criterion>make validate passes and checks both skills, including rubric prose and criteria lists staying consistent.</Criterion>
+      <Criterion>make test passes: CLI tests on node:test cover score, lint, diff, and report with golden fixtures.</Criterion>
+      <Criterion>lint rejects deliberately broken fixtures: evidence file absent on the commit, line out of range, wrong score, foreign commit SHA, missing criterion, empty limits, unverified finding, secret-shaped string.</Criterion>
+      <Criterion>Scoring the same findings twice yields the same score and the same file content.</Criterion>
+      <Criterion>report produces a single HTML file with no external resources that shows scores, findings, and the step-by-step score calculation.</Criterion>
+      <Criterion>skills/smart-review files are unchanged by this change.</Criterion>
+      <Criterion>A full-profile audit of a real repository completes and lint accepts all five results.</Criterion>
+      <Criterion>npx skills add from the local path installs smart-audit into a clean directory and the installed CLI runs score and lint.</Criterion>
+    </AcceptanceCriteria>
+    <AffectedAreas>
+      <M-AUDIT-CLI />
+      <M-AUDIT-SKILL />
+      <M-AUDIT-RUBRICS />
+      <M-AUDIT-PLUGIN />
+    </AffectedAreas>
+    <VerificationIntent>
+      <ExpectedCommand>make validate</ExpectedCommand>
+      <ExpectedCommand>make test</ExpectedCommand>
+      <ExpectedEvidence>Structure check passes for both skills; all CLI tests pass; broken fixtures are rejected with the expected rule identifiers.</ExpectedEvidence>
+    </VerificationIntent>
+    <Assumptions>
+      <Assumption>The maintainer pre-approved this specification and its plan in the goal brief; no interview was held.</Assumption>
+      <Assumption>git is available wherever lint runs, because evidence is checked against the audited commit.</Assumption>
+      <Assumption>Score weights and caps are chosen in this change and documented with their rationale; they may change only with a rubric or scoring version bump.</Assumption>
+    </Assumptions>
+  </C-REPO-AUDIT-V1>
+</GraceChangeSpec>

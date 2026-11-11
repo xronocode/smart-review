@@ -2,3 +2,6 @@ reference/project-scan.json
 *.pyc
 .DS_Store
 node_modules/
+
+# smart-audit run artifacts
+.smart-audit/

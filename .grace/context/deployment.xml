@@ -1,0 +1,5 @@
+<GraceDeployment graceVersion="4.0">
+  <Applicability>applicable</Applicability>
+  <Target>Public GitHub repository xronocode/smart-review (skills installed with npx skills add, plus a Claude Code plugin manifest) and an npm package for the scoring and lint CLI</Target>
+  <Notes>Releases are tagged versions with a CHANGELOG entry. CI must pass before a release: structure validation, link check, secret scan, and CLI tests. Publishing to npm and pushing tags are done by the maintainer, not automatically. Rollback is a new patch release; the previous npm version stays installable.</Notes>
+</GraceDeployment>

@@ -1,0 +1,26 @@
+{
+  "name": "smart-audit",
+  "version": "0.1.0",
+  "description": "Deterministic scoring, machine verification, run comparison, and reports for agent-run repository audits (CLI of the smart-audit skill).",
+  "license": "MIT",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "smart-audit": "skills/smart-audit/cli/smart-audit.mjs"
+  },
+  "files": [
+    "skills/smart-audit/cli",
+    "skills/smart-audit/schemas",
+    "skills/smart-audit/rubrics/*.json"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test \"tests/cli/*.test.mjs\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xronocode/smart-review.git"
+  }
+}

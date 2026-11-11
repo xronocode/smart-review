@@ -1,0 +1,131 @@
+<GraceChangePlan graceVersion="4.0" status="approved">
+  <C-REPO-AUDIT-V1>
+    <IntentSummary>Add the smart-audit skill, its rubrics, a dependency-free scoring/lint/diff/report CLI with tests, and a thin Claude Code plugin wrapper, without changing the smart-review skill.</IntentSummary>
+    <BaselineAssertions>
+      <MustNotExist>
+        <Value>M-AUDIT-CLI</Value>
+        <Value>M-AUDIT-SKILL</Value>
+        <Value>M-AUDIT-RUBRICS</Value>
+        <Value>M-AUDIT-PLUGIN</Value>
+      </MustNotExist>
+    </BaselineAssertions>
+    <TargetAssertions>
+      <MustExist>
+        <Value>M-AUDIT-CLI</Value>
+        <Value>M-AUDIT-SKILL</Value>
+        <Value>M-AUDIT-RUBRICS</Value>
+        <Value>M-AUDIT-PLUGIN</Value>
+      </MustExist>
+      <MustVerify>
+        <Module>M-AUDIT-CLI</Module>
+        <Module>M-AUDIT-SKILL</Module>
+        <Module>M-AUDIT-RUBRICS</Module>
+        <Module>M-AUDIT-PLUGIN</Module>
+      </MustVerify>
+      <MustPassCommand>
+        <Command>make validate</Command>
+        <Command>make test</Command>
+      </MustPassCommand>
+    </TargetAssertions>
+    <DurableScope>
+      <GraphAnchors>
+        <M-AUDIT-CLI />
+        <M-AUDIT-SKILL />
+        <M-AUDIT-RUBRICS />
+        <M-AUDIT-PLUGIN />
+      </GraphAnchors>
+      <VerificationAnchors>
+        <V-M-AUDIT-CLI />
+        <V-M-AUDIT-SKILL />
+        <V-M-AUDIT-RUBRICS />
+        <V-M-AUDIT-PLUGIN />
+      </VerificationAnchors>
+    </DurableScope>
+    <ObservedWriteScope>
+      <Glob>skills/smart-audit/**</Glob>
+      <Glob>tests/**</Glob>
+      <Glob>.claude-plugin/**</Glob>
+      <Glob>commands/**</Glob>
+      <Glob>examples/**</Glob>
+      <File>package.json</File>
+      <File>Makefile</File>
+      <File>.github/workflows/ci.yml</File>
+      <File>.gitignore</File>
+      <File>README.md</File>
+      <File>CHANGELOG.md</File>
+      <File>SECURITY.md</File>
+    </ObservedWriteScope>
+    <ImplementationPlan>
+      <T-001>
+        <Title>Schemas and scoring core of the CLI</Title>
+        <DependsOn></DependsOn>
+        <AcceptanceCriteria>
+          <Criterion>JSON Schemas for findings, recon, and run metadata exist; score computes deductions and caps from findings and is idempotent.</Criterion>
+        </AcceptanceCriteria>
+        <Verification>
+          <Command>make test</Command>
+        </Verification>
+      </T-001>
+      <T-002>
+        <Title>Rubric criteria lists and prose for five audits</Title>
+        <DependsOn></DependsOn>
+        <AcceptanceCriteria>
+          <Criterion>Each of the five rubrics has a prose file and a criteria list with question, version, and criteria that agree with each other.</Criterion>
+        </AcceptanceCriteria>
+        <Verification>
+          <Command>make validate</Command>
+        </Verification>
+      </T-002>
+      <T-003>
+        <Title>lint, diff, and report commands with golden fixtures</Title>
+        <DependsOn>T-001, T-002</DependsOn>
+        <AcceptanceCriteria>
+          <Criterion>lint accepts a valid run and rejects each deliberately broken fixture with its rule identifier; diff classifies findings against a previous run; report writes Markdown and one self-contained HTML file.</Criterion>
+        </AcceptanceCriteria>
+        <Verification>
+          <Command>make test</Command>
+        </Verification>
+      </T-003>
+      <T-004>
+        <Title>smart-audit skill: orchestrator, recon, auditor, verifier, references</Title>
+        <DependsOn>T-002, T-003</DependsOn>
+        <AcceptanceCriteria>
+          <Criterion>skills/smart-audit has SKILL.md, agent prompts, and references describing profiles, run layout, guidance and accepted-risk files, sequential fallback, and the lint gate; skills/smart-review is unchanged.</Criterion>
+        </AcceptanceCriteria>
+        <Verification>
+          <Command>make validate</Command>
+        </Verification>
+      </T-004>
+      <T-005>
+        <Title>Claude Code plugin manifest and audit command</Title>
+        <DependsOn>T-004</DependsOn>
+        <AcceptanceCriteria>
+          <Criterion>A plugin manifest and an audit command exist at the repository root and contain no logic beyond delegating to the skill.</Criterion>
+        </AcceptanceCriteria>
+        <Verification>
+          <Command>make validate</Command>
+        </Verification>
+      </T-005>
+      <T-006>
+        <Title>Package manifest, Makefile targets, and CI job for CLI tests</Title>
+        <DependsOn>T-003</DependsOn>
+        <AcceptanceCriteria>
+          <Criterion>package.json exposes the CLI as a bin with no dependencies; make test runs the node:test suite; CI runs it with pinned actions and a read-only token.</Criterion>
+        </AcceptanceCriteria>
+        <Verification>
+          <Command>make test</Command>
+        </Verification>
+      </T-006>
+      <T-007>
+        <Title>README, CHANGELOG, SECURITY, and a synthetic example report</Title>
+        <DependsOn>T-004, T-005, T-006</DependsOn>
+        <AcceptanceCriteria>
+          <Criterion>Docs explain the audit, installation, limits, and the audit threat model; the example report is generated from a synthetic repository by the CLI.</Criterion>
+        </AcceptanceCriteria>
+        <Verification>
+          <Command>make validate</Command>
+        </Verification>
+      </T-007>
+    </ImplementationPlan>
+  </C-REPO-AUDIT-V1>
+</GraceChangePlan>
