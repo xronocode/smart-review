@@ -99,6 +99,17 @@ warning as a prompt to look, since the same line can legitimately matter to two 
 Pass on to the owning auditor's document anything an auditor or verifier reported as
 belonging to another audit, with the same evidence standard.
 
+Ownership when both audits ran:
+
+| Topic | Owner | The other audit keeps |
+|---|---|---|
+| How third-party code is fetched, pinned, and run at install or build time | `dependencies` | `security`: a sentence in the `supply` criterion note |
+| A security control that no test pins | `security` reports the weakness; `tests` reports the missing test | both, as different findings with different fixes |
+| A missing or wrong instruction, command, or document | `ai-readiness` | `hygiene`: a sentence in `onboarding` or `commands` |
+| Unused code, clutter, swallowed errors | `hygiene` | — |
+
+When an audit ran alone, it keeps its finding.
+
 ## Step 6 — Score, lint, report
 
 Run `smart-audit finish <runDir> --repo <repo>`.
