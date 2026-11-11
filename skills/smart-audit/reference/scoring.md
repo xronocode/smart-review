@@ -28,7 +28,7 @@ Criteria scores (0–5) are diagnostic. They are shown in the report and never e
 |---|---|---|
 | 70–100 | good | no known top risk; keep building |
 | 40–69 | fair | known problems worth scheduling |
-| 0–39 | poor | at least one problem that should stop a release |
+| 0–39 | poor | a critical problem, or many serious ones together |
 
 The overall score of a run is the rounded mean of the audits that ran.
 
