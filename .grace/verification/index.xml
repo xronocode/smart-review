@@ -2,7 +2,12 @@
   <VerificationDocuments>
     <VD-MAIN>
       <Path>verification/main.xml</Path>
-      <Owns></Owns>
+      <Owns>
+        <V-M-AUDIT-CLI />
+        <V-M-AUDIT-SKILL />
+        <V-M-AUDIT-RUBRICS />
+        <V-M-AUDIT-PLUGIN />
+      </Owns>
     </VD-MAIN>
   </VerificationDocuments>
 </GraceVerificationIndex>

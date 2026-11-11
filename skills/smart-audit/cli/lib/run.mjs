@@ -6,9 +6,10 @@
 // END_MODULE_CONTRACT
 //
 // START_MODULE_MAP
+//   GUIDANCE_FILES - guidance file names looked up at the repository root
+//   OUT_DIR - default output directory inside the audited repository
 //   startRun - create the run directory and run.json, return run metadata and paths
 //   loadRun - read run.json and every findings document of a run directory
-//   GUIDANCE_FILES - guidance file names looked up at the repository root
 // END_MODULE_MAP
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve, basename } from 'node:path';

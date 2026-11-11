@@ -1,3 +1,43 @@
 <GraceVerificationDocument graceVersion="4.0">
-  <VD-MAIN></VD-MAIN>
+  <VD-MAIN>
+    <V-M-AUDIT-CLI>
+      <TestFiles>
+        <File>tests/cli/score.test.mjs</File>
+        <File>tests/cli/lint.test.mjs</File>
+        <File>tests/cli/report.test.mjs</File>
+      </TestFiles>
+      <Command>make test</Command>
+      <Scenario>The score follows the published weights and caps, ignores info and low-confidence findings, and is idempotent on disk.</Scenario>
+      <Scenario>Lint accepts a valid run and rejects evidence missing on the commit, a line out of range, an edited score, a foreign commit, incomplete criteria, empty limits, an unverified finding, and a secret-shaped string.</Scenario>
+      <Scenario>A finding of the previous run must be still present or explained; diff separates new findings from ones missed earlier.</Scenario>
+      <Scenario>The HTML report is one file with no scripts or external resources and escapes finding text.</Scenario>
+      <TraceAssertion>node:test reports zero failing tests for tests/cli/*.test.mjs.</TraceAssertion>
+    </V-M-AUDIT-CLI>
+    <V-M-AUDIT-SKILL>
+      <TestFiles>
+        <File>tests/validate_audit.py</File>
+      </TestFiles>
+      <Command>make validate</Command>
+      <Scenario>Every file the orchestrator names exists: SKILL.md, three agent prompts, four reference documents, three schemas, and the CLI entry.</Scenario>
+      <Scenario>The scoring reference states the same formula, caps, and scoring version as the CLI.</Scenario>
+      <TraceAssertion>make validate prints "smart-audit structure OK" and exits zero.</TraceAssertion>
+    </V-M-AUDIT-SKILL>
+    <V-M-AUDIT-RUBRICS>
+      <TestFiles>
+        <File>tests/validate_audit.py</File>
+      </TestFiles>
+      <Command>make validate</Command>
+      <Scenario>Each rubric's prose headings list exactly the criterion ids of its criteria list, in the same order, with the same version and question.</Scenario>
+      <Scenario>Profiles quick and full exist and name only shipped rubrics.</Scenario>
+      <TraceAssertion>make validate prints "rubrics OK" with five rubric ids.</TraceAssertion>
+    </V-M-AUDIT-RUBRICS>
+    <V-M-AUDIT-PLUGIN>
+      <TestFiles>
+        <File>tests/validate_audit.py</File>
+      </TestFiles>
+      <Command>make validate</Command>
+      <Scenario>The plugin and marketplace manifests are valid JSON and the audit command file exists.</Scenario>
+      <TraceAssertion>make validate exits zero with .claude-plugin/plugin.json and commands/audit.md present.</TraceAssertion>
+    </V-M-AUDIT-PLUGIN>
+  </VD-MAIN>
 </GraceVerificationDocument>
