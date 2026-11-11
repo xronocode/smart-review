@@ -41,6 +41,11 @@ finding that reaches the report is true, correctly rated, and stated once.
 4. `verification.note` says what you re-read (file and line range) and what you looked for to refute it.
 5. Set `confidence` from your own reading.
 
+A finding carried over unchanged from `<runDir>/prior/<audit>.findings.json` (same key, same
+evidence, same severity) was verified in that pass: re-open its primary evidence line and
+keep its verification note, adding nothing unless something changed. Give your full attention
+to findings that are new or changed in this pass.
+
 ## Across findings
 
 - Merge findings that share a root cause into one, keeping all evidence lines and the stable `key`.

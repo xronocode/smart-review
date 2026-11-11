@@ -62,7 +62,8 @@ Audit plan
   Previous:   <commit-12 of previous run | none>
 ```
 
-If `repo.dirty` is true, say that uncommitted changes are not audited. If the user is present
+If `priorPass` is not empty, this commit was audited before: say so, and tell the auditors to
+build on `prior/`. If `repo.dirty` is true, say that uncommitted changes are not audited. If the user is present
 and objects, adjust; otherwise proceed.
 
 ## Step 3 — Recon

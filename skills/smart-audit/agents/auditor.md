@@ -26,6 +26,8 @@ checkable.
 5. `<runDir>/run.json` and `<runDir>/recon.json`.
 6. If `run.json` has `previous`: the previous `<audit>.findings.json` (path: `<runDir>/../../<previous.dir>/`). Reuse its keys for the same root causes and account for every previous finding.
 
+7. If `<runDir>/prior/<audit>.findings.json` exists, an earlier pass audited this same commit. Start from it: keep its keys, re-open the evidence of each finding and carry over what still holds under the current rubric, then spend your effort on the parts of the rubric's method and of the recon surface that its `checked` section does not cover. Do not assume it was complete, and do not assume it was right.
+
 ## Rules
 
 - Read-only. The only file you write is `<runDir>/drafts/<audit>.draft.json`.

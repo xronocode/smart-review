@@ -169,7 +169,7 @@ export function main(argv, out = console.log) {
     if (cmd === 'start') {
       const audits = flags.audits && flags.audits !== true ? flags.audits.split(',').map((s) => s.trim()).filter(Boolean) : undefined;
       const res = startRun({ repo: need(flags, 'repo'), out: flags.out === true ? undefined : flags.out, profile: flags.profile === true ? undefined : flags.profile, audits, lang: flags.lang === 'ru' ? 'ru' : 'en', name: flags.name === true ? undefined : flags.name });
-      out(JSON.stringify({ runDir: res.runDir, ...res.run }, null, 2));
+      out(JSON.stringify({ runDir: res.runDir, priorPass: res.prior, ...res.run }, null, 2));
       return 0;
     }
     const target = pos[1];
