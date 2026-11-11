@@ -88,6 +88,16 @@ re-open every evidence location and try to refute each finding before keeping it
 
 Never skip this step. A draft is not a result.
 
+**Across audits.** Auditors work independently, so two audits can report the same root cause
+(a missing tool that is both a documentation gap and a hygiene problem). After verification,
+read the finding titles of all audits side by side. Where two findings share a root cause,
+keep it in the audit whose rubric owns the topic and replace the other with a sentence in the
+relevant criterion note that names the owning finding. `smart-audit lint` warns
+(`CROSS-AUDIT-DUP`) when two audits start a finding at the same evidence line; treat the
+warning as a prompt to look, since the same line can legitimately matter to two audits.
+Pass on to the owning auditor's document anything an auditor or verifier reported as
+belonging to another audit, with the same evidence standard.
+
 ## Step 6 — Score, lint, report
 
 Run `smart-audit finish <runDir> --repo <repo>`.

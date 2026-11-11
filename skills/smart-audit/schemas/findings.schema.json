@@ -56,7 +56,7 @@
           "additionalProperties": false,
           "required": ["result", "note"],
           "properties": {
-            "result": { "type": "string", "enum": ["confirmed", "downgraded"] },
+            "result": { "type": "string", "enum": ["confirmed", "downgraded", "upgraded"] },
             "note": { "type": "string", "minLength": 1 }
           }
         }

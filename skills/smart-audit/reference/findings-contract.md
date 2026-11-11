@@ -43,7 +43,7 @@ A finding is a confirmed, independent problem with evidence on the audited commi
 | `evidence` | one or more `{path, line}` on the audited commit; start with the line where the problem is, then supporting lines |
 | `verify` | observable checks that will be true once it is fixed |
 | `origin` | only with a previous run: `missed-earlier` if the problem already existed at the previous commit, otherwise `new` |
-| `verification` | written by the verification pass: `{result, note}` |
+| `verification` | written by the verification pass: `{result, note}`, where `result` is `confirmed`, `downgraded`, or `upgraded` |
 
 Rules that keep findings honest:
 
