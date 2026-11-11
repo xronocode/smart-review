@@ -25,7 +25,8 @@ test('finish writes summary, Markdown, and one self-contained HTML file', () => 
   try {
     assert.equal(main(['finish', fx.run.runDir, '--repo', fx.repo], quiet), 0);
     const summary = read(join(fx.run.runDir, 'summary.json'));
-    assert.deepEqual(Object.fromEntries(Object.entries(summary.audits).map(([k, v]) => [k, v.score])), { dependencies: 94, security: 69, tests: 100 });
+    assert.deepEqual(Object.fromEntries(Object.entries(summary.audits).map(([k, v]) => [k, v.score])), { security: 69, tests: 100, dependencies: 94 });
+    assert.deepEqual(Object.keys(summary.audits), ['security', 'tests', 'dependencies'], 'audits keep the order of the run');
     assert.equal(summary.overall, 88);
     assert.equal(summary.band, 'good');
     const html = readFileSync(join(fx.run.runDir, 'report.html'), 'utf8');
@@ -89,4 +90,17 @@ test('the CLI runs as a standalone executable', () => {
   assert.deepEqual(data.profiles.full, ['security', 'tests', 'dependencies', 'ai-readiness', 'hygiene']);
   assert.deepEqual(data.weights, { critical: 40, high: 15, medium: 6, low: 2, info: 0 });
   assert.equal(main(['nonsense', 'x'], quiet), 2);
+});
+
+test('the report names the repository after its remote, or an explicit name', () => {
+  const r = makeRepo();
+  try {
+    const start = (...extra) => { const l = []; main(['start', '--repo', r.repo, '--audits', 'tests', '--out', join(r.repo, 'o'), ...extra], (x) => l.push(x)); return JSON.parse(l.join('\n')).repo.name; };
+    assert.match(start(), /^smart-audit-test-/);
+    execFileSync('git', ['-C', r.repo, 'remote', 'add', 'upstream', 'git@example.invalid:team/widget.git']);
+    assert.equal(start(), 'widget');
+    assert.equal(start('--name', 'custom'), 'custom');
+  } finally {
+    r.cleanup();
+  }
 });

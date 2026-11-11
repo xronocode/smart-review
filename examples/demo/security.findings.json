@@ -1,0 +1,244 @@
+{
+  "schemaVersion": 1,
+  "audit": "security",
+  "rubricVersion": "1.0.0",
+  "commit": "895cffb11905b081ced5bab6d18aff02f854da5a",
+  "lang": "en",
+  "verdict": "Any caller can read any note and any file under the service directory; fix both before exposing the service.",
+  "summary": "Two problems are reachable without credentials: the note-by-id route returns notes of other users, and the export route builds a file path from the URL. The service trusts an x-user header as identity, which makes both worse. Request bodies are parsed as JSON with the framework default limit, and no secrets are tracked. Nothing was executed, so runtime behavior behind a proxy is not confirmed.",
+  "findings": [
+    {
+      "id": "F-001",
+      "key": "export-route-path-traversal",
+      "title": "Export route reads files outside the exports directory",
+      "severity": "high",
+      "confidence": "high",
+      "what": "GET /export/:file concatenates the URL segment into a filesystem path and passes it to sendFile without normalizing or confining it.",
+      "impact": "An unauthenticated caller can request encoded parent segments and read any file the process can read, including source and environment files. It does not allow writing files.",
+      "fix": "Resolve the requested name against the exports directory and refuse anything that leaves it; prefer the root option of sendFile. Keep the route read-only.",
+      "affected": [
+        "File export"
+      ],
+      "evidence": [
+        {
+          "path": "src/server.js",
+          "line": 20
+        },
+        {
+          "path": "src/server.js",
+          "line": 19
+        }
+      ],
+      "verify": [
+        "A request for an encoded parent path returns 400 or 404.",
+        "A test requests a file outside exports/ and asserts it is refused."
+      ],
+      "verification": {
+        "result": "confirmed",
+        "note": "Re-read src/server.js:19-21; no normalization, no root option, no allow-list on this path."
+      }
+    },
+    {
+      "id": "F-002",
+      "key": "note-read-skips-ownership",
+      "title": "A note can be read by id without checking its owner",
+      "severity": "high",
+      "confidence": "high",
+      "what": "GET /notes/:id returns readNote(id) directly; the list route filters by owner but the single-note route does not.",
+      "impact": "Any caller can enumerate ids and read every user's notes. Ids are sequential, so enumeration is trivial.",
+      "fix": "Check the note owner against the caller in the route or in readNote, and return 404 for notes of other users.",
+      "affected": [
+        "Reading notes"
+      ],
+      "evidence": [
+        {
+          "path": "src/server.js",
+          "line": 10
+        },
+        {
+          "path": "src/store.js",
+          "line": 8
+        },
+        {
+          "path": "src/store.js",
+          "line": 13
+        }
+      ],
+      "verify": [
+        "A request for another user's note id returns 404.",
+        "A test creates notes for two users and asserts the cross-read fails."
+      ],
+      "verification": {
+        "result": "confirmed",
+        "note": "Re-read src/server.js:9-13 and src/store.js:8-10; no owner comparison anywhere on the path."
+      }
+    },
+    {
+      "id": "F-003",
+      "key": "identity-from-client-header",
+      "title": "Caller identity is taken from a client-supplied header",
+      "severity": "medium",
+      "confidence": "medium",
+      "what": "Routes use the x-user request header as the user identity; nothing in this repository authenticates it.",
+      "impact": "A caller can act as any user by setting the header, unless a gateway outside this repository strips and sets it. That gateway is not visible here.",
+      "fix": "Authenticate in the service, or document and enforce that only a trusted proxy can reach it and that it overwrites the header.",
+      "affected": [
+        "All note routes"
+      ],
+      "evidence": [
+        {
+          "path": "src/server.js",
+          "line": 7
+        },
+        {
+          "path": "src/server.js",
+          "line": 16
+        }
+      ],
+      "verify": [
+        "Requests without a valid credential are rejected with 401."
+      ],
+      "verification": {
+        "result": "downgraded",
+        "note": "Lowered from high: a deployment behind an authenticating proxy is plausible and cannot be ruled out from the repository. Re-read src/server.js:1-23."
+      }
+    }
+  ],
+  "unconfirmed": [
+    {
+      "title": "No request rate limit",
+      "note": "No limiter is configured, but no concrete abuse path beyond the findings above was traced."
+    }
+  ],
+  "criteria": [
+    {
+      "id": "secrets",
+      "status": "scored",
+      "score": 5,
+      "note": "No key formats or environment files among 6 tracked files."
+    },
+    {
+      "id": "authn",
+      "status": "scored",
+      "score": 1,
+      "note": "Identity is an unauthenticated header (F-003)."
+    },
+    {
+      "id": "authz",
+      "status": "scored",
+      "score": 1,
+      "note": "List filters by owner; read by id does not (F-002)."
+    },
+    {
+      "id": "input",
+      "status": "scored",
+      "score": 3,
+      "note": "JSON body parsing with default limits; note text is not validated."
+    },
+    {
+      "id": "injection",
+      "status": "na",
+      "note": "No shell, query language, or template engine is used."
+    },
+    {
+      "id": "rendering",
+      "status": "na",
+      "note": "The service returns JSON only."
+    },
+    {
+      "id": "network",
+      "status": "na",
+      "note": "No outbound requests."
+    },
+    {
+      "id": "files",
+      "status": "scored",
+      "score": 1,
+      "note": "Export path is built from the URL (F-001)."
+    },
+    {
+      "id": "crypto",
+      "status": "na",
+      "note": "No cryptography or update channel."
+    },
+    {
+      "id": "supply",
+      "status": "scored",
+      "score": 3,
+      "note": "The export script fetches a tool with npx outside the lockfile; reported in the dependency audit."
+    },
+    {
+      "id": "logging",
+      "status": "scored",
+      "score": 4,
+      "note": "No logging of request bodies."
+    },
+    {
+      "id": "hardening",
+      "status": "scored",
+      "score": 2,
+      "note": "No security headers or limits configured in the repository."
+    },
+    {
+      "id": "sectests",
+      "status": "scored",
+      "score": 0,
+      "note": "No test pins ownership or path confinement."
+    }
+  ],
+  "strengths": [
+    "No secrets are tracked.",
+    "The notes list is filtered by owner."
+  ],
+  "checked": [
+    {
+      "area": "Entry points",
+      "note": "Traced all 4 HTTP routes in src/server.js to the store and filesystem calls."
+    },
+    {
+      "area": "Secrets",
+      "note": "Searched all 6 tracked files for key formats."
+    }
+  ],
+  "limits": [
+    {
+      "text": "The service was not started and no requests were sent.",
+      "effect": "Framework-level path handling was judged from the code, not observed."
+    },
+    {
+      "text": "Deployment configuration is not in the repository.",
+      "effect": "Whether a proxy authenticates callers is unknown; F-003 is rated with that in mind."
+    }
+  ],
+  "tools": [
+    {
+      "name": "gitleaks",
+      "status": "absent"
+    }
+  ],
+  "score": {
+    "scoringVersion": "1",
+    "base": 100,
+    "steps": [
+      {
+        "severity": "high",
+        "count": 2,
+        "weight": 15,
+        "subtotal": 30,
+        "running": 70
+      },
+      {
+        "severity": "medium",
+        "count": 1,
+        "weight": 6,
+        "subtotal": 6,
+        "running": 64
+      }
+    ],
+    "raw": 64,
+    "cap": null,
+    "value": 64,
+    "band": "fair",
+    "notCounted": []
+  }
+}

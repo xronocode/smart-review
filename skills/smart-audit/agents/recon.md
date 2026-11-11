@@ -40,4 +40,7 @@ you do not produce findings.
 Write `<runDir>/recon.json` matching `schemas/recon.schema.json`. Keep notes short and factual.
 `summary` is three or four sentences: what the product is, how it is built, and how big it is.
 
+Before replying, run `node <skill-dir>/cli/smart-audit.mjs check <runDir>/recon.json --repo <repo>`
+and fix every error it reports.
+
 Reply with the path you wrote and a five-line overview. Do not paste the JSON.

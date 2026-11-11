@@ -36,13 +36,23 @@ function readAccepted(repo, commit) {
     .map((a) => ({ audit: a.audit, key: a.key, reason: a.reason.trim() }));
 }
 
+// The repository name shown in reports: the remote's last path segment when there is
+// one, otherwise the directory name (a worktree or temp clone often has an unrelated one).
+function repoName(root) {
+  const remotes = (git(root, ['remote']) || '').split('\n').filter(Boolean);
+  const pick = remotes.includes('origin') ? 'origin' : remotes[0];
+  const url = pick ? git(root, ['remote', 'get-url', pick]) : null;
+  const m = url && url.replace(/\.git$/, '').match(/([^/:]+)$/);
+  return m ? m[1] : basename(root);
+}
+
 // START_CONTRACT: startRun
 //   PURPOSE: Pin an audit run to the repository HEAD commit and record what will be audited.
-//   INPUTS: { repo: string, out?: string, profile?: string, audits?: string[], lang?: string, rubricsDir?: string }
+//   INPUTS: { repo: string, out?: string, profile?: string, audits?: string[], lang?: string, name?: string, rubricsDir?: string }
 //   OUTPUTS: { runDir: string, run: object }
 //   SIDE_EFFECTS: writes run.json into the run directory
 // END_CONTRACT: startRun
-export function startRun({ repo, out, profile = 'quick', audits, lang = 'en', rubricsDir }) {
+export function startRun({ repo, out, profile = 'quick', audits, lang = 'en', name, rubricsDir }) {
   const root = resolve(repo);
   const commit = git(root, ['rev-parse', 'HEAD']);
   if (!commit) throw new CliError(`${root} is not a git repository with at least one commit`);
@@ -79,7 +89,7 @@ export function startRun({ repo, out, profile = 'quick', audits, lang = 'en', ru
     schemaVersion: 1,
     toolVersion: TOOL_VERSION,
     scoringVersion: SCORING_VERSION,
-    repo: { commit, branch, dirty, name: basename(root) },
+    repo: { commit, branch, dirty, name: name || repoName(root) },
     profile: audits ? 'custom' : profile,
     lang,
     audits: ids,
@@ -98,9 +108,17 @@ export function loadRun(runDir) {
   const runPath = join(dir, 'run.json');
   if (!existsSync(runPath)) throw new CliError(`${dir} has no run.json; open a run with "smart-audit start"`);
   const run = readJson(runPath);
+  // Audits appear in the order the run declared them; unexpected files follow alphabetically.
+  const order = Array.isArray(run.audits) ? run.audits : [];
+  const rank = (id) => (order.includes(id) ? order.indexOf(id) : order.length);
+  const ids = readdirSync(dir)
+    .filter((n) => n.endsWith('.findings.json'))
+    .map((n) => n.slice(0, -'.findings.json'.length))
+    .sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
   const docs = {};
-  for (const f of readdirSync(dir).filter((n) => n.endsWith('.findings.json')).sort()) {
-    docs[f.slice(0, -'.findings.json'.length)] = { path: join(dir, f), doc: readJson(join(dir, f)), text: readFileSync(join(dir, f), 'utf8') };
+  for (const id of ids) {
+    const path = join(dir, `${id}.findings.json`);
+    docs[id] = { path, doc: readJson(path), text: readFileSync(path, 'utf8') };
   }
   return { dir, run, docs };
 }

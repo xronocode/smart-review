@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { cpSync, rmSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { main } from '../../skills/smart-audit/cli/smart-audit.mjs';
-import { lintRun, findSecrets } from '../../skills/smart-audit/cli/lib/lint.mjs';
+import { lintRun, checkFile, findSecrets } from '../../skills/smart-audit/cli/lib/lint.mjs';
 import { finding, findingsDoc, makeRepo, write, read, commitAll } from './helpers.mjs';
 
 let fx;
@@ -196,4 +196,34 @@ test('a previous finding must be still present or explained', () => {
   } finally {
     r.cleanup();
   }
+});
+
+test('check validates a single draft, findings file, or recon map', () => {
+  const draftPath = join(fx.runDir, 'drafts', 'security.draft.json');
+  const draft = findingsDoc('security', fx.commit);
+  delete draft.findings[0].verification;
+  write(draftPath, draft);
+  assert.deepEqual(checkFile({ file: draftPath, repo: fx.repo }), { kind: 'draft', errors: [] });
+  assert.equal(main(['check', draftPath, '--repo', fx.repo], quiet), 0);
+  draft.findings[0].evidence[0].line = 99;
+  draft.criteria.pop();
+  write(draftPath, draft);
+  assert.deepEqual(checkFile({ file: draftPath, repo: fx.repo }).errors.map((e) => e.rule), ['CRITERIA-COVERAGE', 'EVIDENCE-LINE']);
+  assert.equal(main(['check', draftPath, '--repo', fx.repo], quiet), 1);
+  const finalPath = join(fx.runDir, 'security.findings.json');
+  assert.equal(checkFile({ file: finalPath, repo: fx.repo }).kind, 'findings');
+  const unverified = `${fx.runDir}-unverified.findings.json`;
+  write(unverified, findingsDoc('security', fx.commit, [(() => { const f = finding(1); delete f.verification; return f; })()]));
+  assert.deepEqual(checkFile({ file: unverified, repo: fx.repo }).errors.map((e) => e.rule), ['SCHEMA']);
+  rmSync(unverified);
+  const reconPath = join(fx.runDir, 'recon.json');
+  const recon = { schemaVersion: 1, commit: fx.commit, summary: 'Demo.', languages: [{ name: 'JavaScript', files: 2 }], manifests: [], entryPoints: [], surfaces: [], tests: { roots: [], commands: [] }, ci: [], docs: [{ path: 'README.md' }], agentFiles: [], excluded: [], tools: [], limits: [] };
+  write(reconPath, recon);
+  assert.deepEqual(checkFile({ file: reconPath, repo: fx.repo }), { kind: 'recon', errors: [] });
+  assert.deepEqual(lintRun({ runDir: fx.runDir, repo: fx.repo }).errors, []);
+  write(reconPath, { ...recon, surprise: true, commit: 'd'.repeat(40) });
+  assert.deepEqual(checkFile({ file: reconPath, repo: fx.repo }).errors.map((e) => e.rule), ['SCHEMA', 'RUN-COMMIT']);
+  assert.deepEqual(lintRun({ runDir: fx.runDir, repo: fx.repo }).errors.map((e) => e.rule), ['SCHEMA', 'COMMIT-MISMATCH']);
+  rmSync(reconPath);
+  rmSync(join(fx.runDir, 'drafts'), { recursive: true });
 });

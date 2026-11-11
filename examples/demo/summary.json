@@ -1,0 +1,49 @@
+{
+  "commit": "895cffb11905b081ced5bab6d18aff02f854da5a",
+  "branch": "main",
+  "profile": "quick",
+  "scoringVersion": "1",
+  "overall": 67,
+  "band": "fair",
+  "audits": {
+    "security": {
+      "score": 64,
+      "band": "fair",
+      "rubricVersion": "1.0.0",
+      "findings": {
+        "critical": 0,
+        "high": 2,
+        "medium": 1,
+        "low": 0,
+        "info": 0
+      },
+      "verdict": "Any caller can read any note and any file under the service directory; fix both before exposing the service."
+    },
+    "tests": {
+      "score": 69,
+      "band": "fair",
+      "rubricVersion": "1.0.0",
+      "findings": {
+        "critical": 0,
+        "high": 1,
+        "medium": 1,
+        "low": 0,
+        "info": 0
+      },
+      "verdict": "The suite would not catch a broken route or a broken ownership rule: only the in-memory store has tests, and one of the two is decorative."
+    },
+    "dependencies": {
+      "score": 69,
+      "band": "fair",
+      "rubricVersion": "1.0.0",
+      "findings": {
+        "critical": 0,
+        "high": 1,
+        "medium": 1,
+        "low": 0,
+        "info": 0
+      },
+      "verdict": "Installs are not reproducible: there is no lockfile, and one script downloads a tool at run time."
+    }
+  }
+}

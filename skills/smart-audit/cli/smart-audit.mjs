@@ -14,7 +14,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { CliError, TOOL_VERSION, parseArgs, readJson, writeJson, skillRoot } from './lib/util.mjs';
 import { computeScore, SCORING_VERSION, WEIGHTS, CAPS } from './lib/score.mjs';
-import { lintRun, RULES } from './lib/lint.mjs';
+import { lintRun, checkFile, RULES } from './lib/lint.mjs';
 import { diffRuns } from './lib/diff.mjs';
 import { startRun, loadRun } from './lib/run.mjs';
 import { loadRubric, loadProfiles, listRubrics } from './lib/rubrics.mjs';
@@ -23,8 +23,9 @@ import { buildSummary, renderMarkdown, renderHtml } from './lib/report.mjs';
 const HELP = `smart-audit ${TOOL_VERSION} — deterministic scoring and verification for repository audits
 
 Usage:
-  smart-audit start  --repo <path> [--profile quick|full | --audits a,b] [--out <dir>] [--lang en|ru]
+  smart-audit start  --repo <path> [--profile quick|full | --audits a,b] [--out <dir>] [--lang en|ru] [--name <repo-name>]
   smart-audit score  <run-dir | findings.json>
+  smart-audit check  <recon.json | draft.json | findings.json> --repo <path>   check one document while working
   smart-audit lint   <run-dir> --repo <path> [--json]
   smart-audit diff   <run-dir> [--prev <run-dir>]
   smart-audit report <run-dir> [--lang en|ru]
@@ -166,15 +167,24 @@ export function main(argv, out = console.log) {
     }
     if (cmd === 'start') {
       const audits = flags.audits && flags.audits !== true ? flags.audits.split(',').map((s) => s.trim()).filter(Boolean) : undefined;
-      const res = startRun({ repo: need(flags, 'repo'), out: flags.out === true ? undefined : flags.out, profile: flags.profile === true ? undefined : flags.profile, audits, lang: flags.lang === 'ru' ? 'ru' : 'en' });
+      const res = startRun({ repo: need(flags, 'repo'), out: flags.out === true ? undefined : flags.out, profile: flags.profile === true ? undefined : flags.profile, audits, lang: flags.lang === 'ru' ? 'ru' : 'en', name: flags.name === true ? undefined : flags.name });
       out(JSON.stringify({ runDir: res.runDir, ...res.run }, null, 2));
       return 0;
     }
     const target = pos[1];
-    if (!target) throw new CliError(`${cmd}: a run directory is required`);
+    if (!target) throw new CliError(`${cmd}: a run directory or file is required`);
     if (cmd === 'score') {
       scoreTarget(target, out);
       return 0;
+    }
+    if (cmd === 'check') {
+      const res = checkFile({ file: resolve(target), repo: need(flags, 'repo') });
+      if (flags.json) out(JSON.stringify(res, null, 2));
+      else {
+        for (const e of res.errors) out(`error   ${e.rule.padEnd(22)} ${e.message}`);
+        out(res.errors.length ? `${res.kind} check failed: ${res.errors.length} error(s)` : `${res.kind} check passed`);
+      }
+      return res.errors.length ? 1 : 0;
     }
     if (cmd === 'lint') {
       const res = lintRun({ runDir: target, repo: need(flags, 'repo') });

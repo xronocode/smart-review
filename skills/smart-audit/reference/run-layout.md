@@ -16,7 +16,8 @@ stands for that command.
 | Command | What it does |
 |---|---|
 | `smart-audit rubrics` | lists audits, profiles, and scoring constants |
-| `smart-audit start --repo <path> [--profile quick\|full] [--audits a,b] [--out <dir>] [--lang en\|ru]` | pins the run to `HEAD`, writes `run.json`, prints it with `runDir` |
+| `smart-audit start --repo <path> [--profile quick\|full] [--audits a,b] [--out <dir>] [--lang en\|ru] [--name <repo-name>]` | pins the run to `HEAD`, writes `run.json`, prints it with `runDir` |
+| `smart-audit check <file> --repo <path>` | checks one `recon.json`, draft, or findings file on its own: schema, evidence on the commit, criteria coverage |
 | `smart-audit score <run-dir>` | writes `score` into every findings document |
 | `smart-audit lint <run-dir> --repo <path>` | verifies the run; exit code 1 on errors |
 | `smart-audit diff <run-dir>` | compares with the previous run, writes `diff.json` |
