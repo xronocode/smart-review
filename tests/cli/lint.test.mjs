@@ -2,18 +2,18 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { cpSync, rmSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
-import { main } from '../../skills/smart-audit/cli/smart-audit.mjs';
-import { lintRun, checkFile, findSecrets } from '../../skills/smart-audit/cli/lib/lint.mjs';
+import { main } from '../../skills/smart-review/cli/smart-review.mjs';
+import { lintRun, checkFile, findSecrets } from '../../skills/smart-review/cli/lib/lint.mjs';
 import { finding, findingsDoc, makeRepo, write, read, commitAll } from './helpers.mjs';
 
 let fx;
 const quiet = () => {};
 
-// A valid two-audit run in a throwaway repository; each test mutates a copy.
+// A valid two-section run in a throwaway repository; each test mutates a copy.
 before(() => {
   fx = makeRepo();
   const lines = [];
-  assert.equal(main(['start', '--repo', fx.repo, '--audits', 'security,tests'], (l) => lines.push(l)), 0);
+  assert.equal(main(['start', '--repo', fx.repo, '--sections', 'security,tests'], (l) => lines.push(l)), 0);
   fx.runDir = JSON.parse(lines.join('\n')).runDir;
   write(join(fx.runDir, 'security.findings.json'), findingsDoc('security', fx.commit));
   write(join(fx.runDir, 'tests.findings.json'), findingsDoc('tests', fx.commit, []));
@@ -40,7 +40,7 @@ test('a valid run passes with no errors', () => {
   assert.equal(main(['lint', fx.runDir, '--repo', fx.repo], quiet), 0);
 });
 
-test('evidence file absent on the audited commit is rejected', () => {
+test('evidence file absent on the reviewed commit is rejected', () => {
   assert.deepEqual(variant((d) => { d.findings[0].evidence[0].path = 'src/missing.js'; }), ['EVIDENCE-MISSING']);
 });
 
@@ -118,8 +118,8 @@ test('a secret-shaped string anywhere in the output is rejected', () => {
   assert.equal(findSecrets('masked value ghp_****').length, 0);
 });
 
-test('an audit listed in the run without a findings file is rejected', () => {
-  assert.deepEqual(variant((d, dir) => { unlinkSync(join(dir, 'tests.findings.json')); }), ['AUDIT-MISSING']);
+test('a section listed in the run without a findings file is rejected', () => {
+  assert.deepEqual(variant((d, dir) => { unlinkSync(join(dir, 'tests.findings.json')); }), ['SECTION-MISSING']);
 });
 
 test('low-confidence severe findings only warn', () => {
@@ -149,14 +149,14 @@ test('lint command exits 1 on errors and 2 on bad input', () => {
   assert.equal(main(['lint', fx.runDir], quiet), 2);
 });
 
-test('accepted risks are read from the audited commit, not the working tree', () => {
-  const r = makeRepo({ '.smart-audit/accepted.json': JSON.stringify({ accepted: [{ audit: 'security', key: 'sample-finding-1', reason: 'tracked in the backlog' }, { audit: 'security', key: 'no-reason', reason: ' ' }] }) });
+test('accepted risks are read from the reviewed commit, not the working tree', () => {
+  const r = makeRepo({ '.smart-review/accepted.json': JSON.stringify({ accepted: [{ section: 'security', key: 'sample-finding-1', reason: 'tracked in the backlog' }, { section: 'security', key: 'no-reason', reason: ' ' }] }) });
   try {
-    write(join(r.repo, '.smart-audit', 'accepted.json'), JSON.stringify({ accepted: [] }));
+    write(join(r.repo, '.smart-review', 'accepted.json'), JSON.stringify({ accepted: [] }));
     const lines = [];
-    main(['start', '--repo', r.repo, '--audits', 'security', '--out', join(r.repo, 'out')], (l) => lines.push(l));
+    main(['start', '--repo', r.repo, '--sections', 'security', '--out', join(r.repo, 'out')], (l) => lines.push(l));
     const run = JSON.parse(lines.join('\n'));
-    assert.deepEqual(run.accepted, [{ audit: 'security', key: 'sample-finding-1', reason: 'tracked in the backlog' }]);
+    assert.deepEqual(run.accepted, [{ section: 'security', key: 'sample-finding-1', reason: 'tracked in the backlog' }]);
     assert.equal(run.repo.dirty, true);
     write(join(run.runDir, 'security.findings.json'), findingsDoc('security', r.commit));
     main(['score', run.runDir], quiet);
@@ -173,7 +173,7 @@ test('a previous finding must be still present or explained', () => {
   const r = makeRepo();
   try {
     const out = join(r.repo, 'out');
-    const start = () => { const l = []; main(['start', '--repo', r.repo, '--audits', 'security', '--out', out], (x) => l.push(x)); return JSON.parse(l.join('\n')); };
+    const start = () => { const l = []; main(['start', '--repo', r.repo, '--sections', 'security', '--out', out], (x) => l.push(x)); return JSON.parse(l.join('\n')); };
     const first = start();
     write(join(first.runDir, 'security.findings.json'), findingsDoc('security', r.commit, [finding(1), finding(2)]));
     assert.equal(main(['finish', first.runDir, '--repo', r.repo], quiet), 0);
@@ -190,9 +190,9 @@ test('a previous finding must be still present or explained', () => {
     write(file, doc);
     assert.equal(main(['finish', run2.runDir, '--repo', r.repo], quiet), 0);
     const diff = read(join(run2.runDir, 'diff.json'));
-    assert.deepEqual(diff.audits.security.items.map((i) => [i.key, i.status]), [['sample-finding-1', 'still-present'], ['sample-finding-2', 'fixed']]);
-    assert.equal(diff.audits.security.delta, 6);
-    assert.equal(diff.audits.security.comparable, true);
+    assert.deepEqual(diff.sections.security.items.map((i) => [i.key, i.status]), [['sample-finding-1', 'still-present'], ['sample-finding-2', 'fixed']]);
+    assert.equal(diff.sections.security.delta, 6);
+    assert.equal(diff.sections.security.comparable, true);
     assert.equal(read(join(out, 'index.json')).runs.length, 2);
   } finally {
     r.cleanup();
@@ -229,16 +229,16 @@ test('check validates a single draft, findings file, or recon map', () => {
   rmSync(join(fx.runDir, 'drafts'), { recursive: true });
 });
 
-test('the same evidence line reported by two audits only warns', () => {
+test('the same evidence line reported by two sections only warns', () => {
   const dir = `${fx.runDir}-cross`;
   cpSync(fx.runDir, dir, { recursive: true });
   const file = join(dir, 'tests.findings.json');
   const doc = read(file);
-  doc.findings = [finding(1, { key: 'same-line-other-audit', verification: { result: 'upgraded', note: 'Raised after reading the caller.' } })];
+  doc.findings = [finding(1, { key: 'same-line-other-section', verification: { result: 'upgraded', note: 'Raised after reading the caller.' } })];
   write(file, doc);
   main(['score', dir], quiet);
   const res = lintRun({ runDir: dir, repo: fx.repo });
   rmSync(dir, { recursive: true, force: true });
   assert.deepEqual(res.errors, []);
-  assert.deepEqual(res.warnings.map((w) => [w.rule, w.audit]), [['CROSS-AUDIT-DUP', 'tests']]);
+  assert.deepEqual(res.warnings.map((w) => [w.rule, w.section]), [['CROSS-SECTION-DUP', 'tests']]);
 });

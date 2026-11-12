@@ -6,8 +6,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-export const SKILL = join(ROOT, 'skills', 'smart-audit');
-export const CLI = join(SKILL, 'cli', 'smart-audit.mjs');
+export const SKILL = join(ROOT, 'skills', 'smart-review');
+export const CLI = join(SKILL, 'cli', 'smart-review.mjs');
 
 const g = (cwd, ...args) =>
   execFileSync('git', ['-C', cwd, '-c', 'user.name=test', '-c', 'user.email=test@example.invalid', '-c', 'commit.gpgsign=false', ...args], { encoding: 'utf8' }).trim();
@@ -19,7 +19,7 @@ export function commitAll(repo, message) {
 }
 
 export function makeRepo(extra = {}) {
-  const repo = mkdtempSync(join(tmpdir(), 'smart-audit-test-'));
+  const repo = mkdtempSync(join(tmpdir(), 'smart-review-test-'));
   g(repo, 'init', '-q', '-b', 'main');
   const files = {
     'README.md': '# demo\n\nRun `npm test`.\n',
@@ -52,21 +52,21 @@ export function finding(n, over = {}) {
     affected: ['demo module'],
     evidence: [{ path: 'src/app.js', line: 3 }],
     verify: ['A test with an invalid value fails before the fix and passes after.'],
-    verification: { result: 'confirmed', note: 'Re-read src/app.js at the audited commit.' },
+    verification: { result: 'confirmed', note: 'Re-read src/app.js at the reviewed commit.' },
     ...over,
   };
 }
 
-export function findingsDoc(audit, commit, findings = [finding(1)], over = {}) {
-  const r = rubric(audit);
+export function findingsDoc(section, commit, findings = [finding(1)], over = {}) {
+  const r = rubric(section);
   return {
     schemaVersion: 1,
-    audit,
+    section,
     rubricVersion: r.version,
     commit,
     lang: 'en',
     verdict: 'One confirmed problem.',
-    summary: 'The audit found one confirmed problem and no critical issues.',
+    summary: 'The section found one confirmed problem and no critical issues.',
     findings,
     unconfirmed: [],
     criteria: r.criteria.map((c, i) => (i === 0 ? { id: c.id, status: 'na', note: 'No such surface in this repository.' } : { id: c.id, status: 'scored', score: 4, note: 'Reviewed.' })),

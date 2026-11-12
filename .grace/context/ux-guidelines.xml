@@ -1,7 +1,7 @@
 <GraceUXGuidelines graceVersion="4.0">
   <Applicability>applicable</Applicability>
   <Audience>Developers reading agent output in a terminal and an HTML report in a browser; some read Russian, some English</Audience>
-  <Guideline>One command starts an audit; before starting, show which audits will run and the expected effort.</Guideline>
+  <Guideline>One command per section, and one for everything applicable; before starting, show which sections will run and the expected effort.</Guideline>
   <Guideline>A report leads with the answer: score, one-sentence verdict, branch and commit; then findings, criteria, score calculation, comparison with the previous run, and limits.</Guideline>
   <Guideline>Each finding says what was found, why it matters, what to do, where the evidence is, and how to verify the fix, in plain language.</Guideline>
   <Guideline>The score calculation is shown step by step so a reader can redo it by hand.</Guideline>

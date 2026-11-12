@@ -1,33 +1,37 @@
 <GraceGraphDocument graceVersion="4.0">
   <GD-MAIN>
-    <M-AUDIT-CLI>
-      <Summary>Dependency-free Node CLI of smart-audit: opens a run pinned to a commit, checks single documents, computes scores, lints a run, compares it with the previous run, and renders Markdown and HTML reports.</Summary>
-      <Path>skills/smart-audit/cli/smart-audit.mjs</Path>
-      <Path>skills/smart-audit/cli/lib/util.mjs</Path>
-      <Path>skills/smart-audit/cli/lib/validate.mjs</Path>
-      <Path>skills/smart-audit/cli/lib/score.mjs</Path>
-      <Path>skills/smart-audit/cli/lib/rubrics.mjs</Path>
-      <Path>skills/smart-audit/cli/lib/run.mjs</Path>
-      <Path>skills/smart-audit/cli/lib/lint.mjs</Path>
-      <Path>skills/smart-audit/cli/lib/diff.mjs</Path>
-      <Path>skills/smart-audit/cli/lib/report.mjs</Path>
-      <Path>skills/smart-audit/cli/lib/i18n.mjs</Path>
-      <M-AUDIT-RUBRICS />
-    </M-AUDIT-CLI>
-    <M-AUDIT-SKILL>
-      <Summary>The smart-audit skill: orchestrator instructions, recon, auditor, and verifier agent prompts, reference documents for the findings contract, scoring, untrusted input, and run layout, and the JSON Schemas of run artifacts.</Summary>
-      <Path>skills/smart-audit/SKILL.md</Path>
-      <M-AUDIT-CLI />
-      <M-AUDIT-RUBRICS />
-    </M-AUDIT-SKILL>
-    <M-AUDIT-RUBRICS>
-      <Summary>Rubrics of the five audits: prose method and evidence rules per audit, machine-readable criteria lists with versions, and run profiles.</Summary>
-      <Path>skills/smart-audit/rubrics/profiles.json</Path>
-    </M-AUDIT-RUBRICS>
-    <M-AUDIT-PLUGIN>
-      <Summary>Thin Claude Code plugin wrapper: plugin and marketplace manifests and the audit command that delegates to the smart-audit skill.</Summary>
+    <M-SECTION-CLI>
+      <Summary>Dependency-free Node CLI of smart-review: opens a run pinned to a commit, checks single documents, computes scores, lints a run, compares it with the previous run, and renders Markdown and HTML reports.</Summary>
+      <Path>skills/smart-review/cli/smart-review.mjs</Path>
+      <Path>skills/smart-review/cli/lib/util.mjs</Path>
+      <Path>skills/smart-review/cli/lib/validate.mjs</Path>
+      <Path>skills/smart-review/cli/lib/score.mjs</Path>
+      <Path>skills/smart-review/cli/lib/rubrics.mjs</Path>
+      <Path>skills/smart-review/cli/lib/run.mjs</Path>
+      <Path>skills/smart-review/cli/lib/lint.mjs</Path>
+      <Path>skills/smart-review/cli/lib/diff.mjs</Path>
+      <Path>skills/smart-review/cli/lib/report.mjs</Path>
+      <Path>skills/smart-review/cli/lib/i18n.mjs</Path>
+      <M-SECTION-RUBRICS />
+    </M-SECTION-CLI>
+    <M-SECTION-SKILL>
+      <Summary>The smart-review skill: the section dispatcher in SKILL.md, the changes workflow (diff review modes and reviewer agents), the repository workflow for scored sections (recon, inspector, and verifier agent prompts), reference documents for the findings contract, scoring, untrusted input, and run layout, and the JSON Schemas of run artifacts.</Summary>
+      <Path>skills/smart-review/SKILL.md</Path>
+      <Path>skills/smart-review/workflows/changes.md</Path>
+      <Path>skills/smart-review/workflows/repository.md</Path>
+      <M-SECTION-CLI />
+      <M-SECTION-RUBRICS />
+    </M-SECTION-SKILL>
+    <M-SECTION-RUBRICS>
+      <Summary>Rubrics of the scored sections: prose method and evidence rules per section, machine-readable criteria lists with versions, and run profiles.</Summary>
+      <Path>skills/smart-review/rubrics/profiles.json</Path>
+    </M-SECTION-RUBRICS>
+    <M-SECTION-PLUGIN>
+      <Summary>Thin Claude Code plugin wrapper: plugin and marketplace manifests and one command per section (plus full, quick, update), each delegating to the smart-review skill.</Summary>
       <Path>.claude-plugin/plugin.json</Path>
-      <M-AUDIT-SKILL />
-    </M-AUDIT-PLUGIN>
+      <Path>.claude-plugin/marketplace.json</Path>
+      <Path>commands/full.md</Path>
+      <M-SECTION-SKILL />
+    </M-SECTION-PLUGIN>
   </GD-MAIN>
 </GraceGraphDocument>

@@ -3,8 +3,8 @@
   <Principle>Keep semantic anchors stable and grep-friendly.</Principle>
   <Principle>Use assertions, scopes, and tests as fresh completion evidence.</Principle>
   <Principle>The model finds and explains; the script counts and checks. Nothing numeric or structural is left to model judgment.</Principle>
-  <Principle>No finding without evidence: a file and line on the audited commit, the reachability condition, and how to verify the fix.</Principle>
+  <Principle>No finding without evidence: a file and line on the reviewed commit, the reachability condition, and how to verify the fix.</Principle>
   <Principle>One root cause is one finding, however many symptoms it has.</Principle>
   <Principle>State limits honestly: what was not run or not read, and how that bounds the conclusion.</Principle>
-  <Principle>Do not break existing review users: audit is added beside review, not folded into it.</Principle>
+  <Principle>Do not strand existing review users: the skill keeps the name smart-review so installs upgrade in place, the diff review lives on as the changes section, and renamed modes stay understood.</Principle>
 </GracePrinciples>

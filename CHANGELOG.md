@@ -1,46 +1,52 @@
 # Changelog
 
-## v1.3.0 — unreleased
+## v2.0.0 — unreleased
 
-Repository audit: a second skill, **smart-audit**, beside the diff review.
-Review modes and agents of smart-review are unchanged.
+smart-review becomes a plugin made of **sections**. The diff review is now the `changes`
+section; five scored sections review the whole repository at one commit. One skill, one
+name, one command per section.
 
-- **smart-audit skill** (`skills/smart-audit/`): pins a run to a commit, maps
-  the repository, runs one rubric-driven auditor per audit, verifies every
-  finding in a separate pass, then scores and checks the result with a CLI.
-- **Five audits**: security, tests, dependencies, AI readiness, codebase
-  hygiene. Profiles: `quick` (first three) and `full`.
-- **Evidence contract**: every finding carries `file:line` evidence on the
-  audited commit, impact with its precondition, a fix direction, and a way to
-  verify the fix. Unconfirmed suspicions are listed separately and not scored.
-- **Deterministic score**: `100 − 40·critical − 15·high − 6·medium − 2·low`,
-  capped at 39 with a critical and 69 with a high finding; medium findings
-  together deduct at most 30 and low findings at most 14, so a more thorough
-  audit is not punished for finding more small things. Computed by the CLI,
-  never by the model; the report shows each step.
-- **Scoring version 3**: medium findings together deduct at most 30 points —
-  the medium mirror of the low-findings limit, chosen so medium findings alone
-  can never push a score out of the good band — and the overall score inherits
-  the per-audit caps: a counted critical finding caps the overall score at 39,
-  a counted high finding at 69, so clean audits can no longer average away a
-  serious one. Scores recorded under earlier scoring versions keep their
-  recorded value; scores are comparable only within one scoring version, and
-  the report says so when versions differ. Counting rules (which findings are
-  counted) are unchanged from version 2.
-- **`smart-audit` CLI** (Node 22+, no dependencies, ships inside the skill):
-  `start`, `check`, `score`, `lint`, `diff`, `report`, `finish`. `lint` rejects a run on
-  schema errors, evidence that does not exist on the commit, a commit or rubric
-  version mismatch, an edited score, incomplete criteria, empty limits,
-  unexplained findings of the previous run, or secret-shaped strings.
-- **Run comparison**: fixed / still present / not reproduced / new / existed
-  before but missed by the previous run.
-- **Reports**: Markdown and one self-contained HTML file (light and dark),
-  English or Russian.
-- **`SMART_AUDIT.md` guidance file and `.smart-audit/accepted.json`**, both
-  read from the audited commit and treated as untrusted input.
-- **Claude Code plugin manifest** and `/smart-review:audit` command.
-- **CI**: CLI test job (46 tests); `make validate` now checks both skills.
-- `package.json` (`smart-audit`, private, not published).
+**Upgrading from 1.x.** The skill name is unchanged, so `npx skills add
+xronocode/smart-review` upgrades an existing install in place. Breaking: the modes `full`,
+`full+errors`, and `full-project` of the diff review are now `standard`,
+`standard+errors`, and `project` (the old names are still understood as modes of the
+`changes` section); `full` on its own now means "every applicable section"; with no section
+named, every applicable section runs instead of the diff review alone.
+
+- **Sections**: `changes`, `security`, `tests`, `dependencies`, `ai-readiness`, `hygiene`.
+  `SKILL.md` chooses the sections, shows the plan with the number of agents, and hands
+  them to `workflows/changes.md` or `workflows/repository.md`.
+- **Plugin commands**: `/smart-review:changes`, `:security`, `:tests`, `:dependencies`,
+  `:ai-readiness`, `:hygiene`, `:quick` (security, tests, dependencies), `:full` (every
+  applicable section), `:update`. A scored section is a rubric plus a command file; the
+  orchestrator does not change when one is added.
+- **Scored sections**: a run is pinned to a commit; one agent maps the repository, one
+  inspector per section follows its rubric, a separate pass verifies every finding, and
+  the CLI scores and checks the result.
+- **Evidence contract**: every finding carries `file:line` evidence on the reviewed
+  commit, impact with its precondition, a fix direction, and a way to verify the fix.
+  Unconfirmed suspicions are listed separately and not scored.
+- **Deterministic score** (scoring version 3): `100 − 40·critical − 15·high − 6·medium −
+  2·low`, capped at 39 with a critical and 69 with a high finding; medium findings
+  together deduct at most 30 and low findings at most 14, so a more thorough review is not
+  punished for finding more. The overall score is the mean of the sections under the same
+  caps. Computed by the CLI, never by the model; the report shows each step. Scores are
+  comparable only within one scoring version.
+- **`smart-review` CLI** (Node 22+, no dependencies, ships inside the skill): `start`,
+  `check`, `score`, `lint`, `diff`, `report`, `finish`, `rubrics`. `lint` rejects a run on
+  schema errors, evidence that does not exist on the commit, a commit or rubric version
+  mismatch, an edited score, incomplete criteria, empty limits, unexplained findings of
+  the previous run, or secret-shaped strings.
+- **Run comparison**: fixed / still present / not reproduced / new / existed before but
+  missed by the previous run.
+- **Reports**: Markdown and one self-contained HTML file (light and dark), English or
+  Russian.
+- **`SMART_REVIEW.md` guidance file and `.smart-review/accepted.json`**, both read from
+  the reviewed commit and treated as untrusted input.
+- **Claude Code plugin and marketplace manifests**.
+- **CI**: CLI test job (46 tests); `make validate` checks the skill, the rubrics, and that
+  every section has a command.
+- `package.json` (`@xronocode/smart-review`, private, not published).
 
 ## v1.2.0 — 2026-10-25
 

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "audit": "security",
+  "section": "security",
   "rubricVersion": "1.1.0",
-  "commit": "895cffb11905b081ced5bab6d18aff02f854da5a",
+  "commit": "b81099ba23c4dd039a8781ce57095209c12a22d1",
   "lang": "en",
   "verdict": "Any caller can read any note and any file under the service directory; fix both before exposing the service.",
   "summary": "Two problems are reachable without credentials: the note-by-id route returns notes of other users, and the export route builds a file path from the URL. The service trusts an x-user header as identity, which makes both worse. Request bodies are parsed as JSON with the framework default limit, and no secrets are tracked. Nothing was executed, so runtime behavior behind a proxy is not confirmed.",
@@ -165,7 +165,7 @@
       "id": "supply",
       "status": "scored",
       "score": 3,
-      "note": "The export script fetches a tool with npx outside the lockfile; reported in the dependency audit."
+      "note": "The export script fetches a tool with npx outside the lockfile; reported in the dependency section."
     },
     {
       "id": "logging",
@@ -217,7 +217,7 @@
     }
   ],
   "score": {
-    "scoringVersion": "2",
+    "scoringVersion": "3",
     "base": 100,
     "steps": [
       {

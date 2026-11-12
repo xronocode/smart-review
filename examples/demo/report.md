@@ -1,13 +1,19 @@
-# Repository audit: notes-api
+# Repository review: notes-api
 
 **Overall score: 67/100** (Needs work)
 
-- Commit: `895cffb11905b081ced5bab6d18aff02f854da5a`
+- Commit: `b81099ba23c4dd039a8781ce57095209c12a22d1`
 - Branch: `main`
 - Profile: quick
-- Date: 2026-11-11
+- Date: 2026-11-12
 
-| Audits | /100 | Findings |
+### Overall score calculation
+
+- Mean of the sections that ran: 67
+- Cap applied: a high finding caps the overall score at 69 → 67
+- Result: 67/100
+
+| Sections | /100 | Findings |
 |---|---|---|
 | Security | 64 | 2 high, 1 medium |
 | Tests | 69 | 1 high, 1 medium |
@@ -70,7 +76,7 @@ Criteria describe the state; they do not change the score.
 | Outbound requests and cross-origin rules | n/a | No outbound requests. |
 | File access, import, and export | 1 | Export path is built from the URL (F-001). |
 | Cryptography, tokens, and update integrity | n/a | No cryptography or update channel. |
-| Dependency acquisition and build-time execution | 3 | The export script fetches a tool with npx outside the lockfile; reported in the dependency audit. |
+| Dependency acquisition and build-time execution | 3 | The export script fetches a tool with npx outside the lockfile; reported in the dependency section. |
 | Logging and error disclosure | 4 | No logging of request bodies. |
 | Platform hardening and security configuration | 2 | No security headers or limits configured in the repository. |
 | Security regression tests | 0 | No test pins ownership or path confinement. |
@@ -105,7 +111,7 @@ Criteria describe the state; they do not change the score.
 
 **The suite would not catch a broken route or a broken ownership rule: only the in-memory store has tests, and one of the two is decorative.**
 
-Two tests exist, both for the store. Nothing exercises the HTTP routes, so the two security problems found in the security audit could be introduced or fixed without any test changing. The suite runs from a documented command and is deterministic. Coverage is not measured.
+Two tests exist, both for the store. Nothing exercises the HTTP routes, so the two security problems found in the security section could be introduced or fixed without any test changing. The suite runs from a documented command and is deterministic. Coverage is not measured.
 
 ### Findings
 
@@ -209,7 +215,7 @@ Criteria describe the state; they do not change the score.
 |---|---|---|
 | Dependency sources are inventoried | 4 | One ecosystem, one manifest, plus one undeclared tool. |
 | Installs are reproducible | 0 | No lockfile (F-001). |
-| State of known vulnerabilities | not established | No scanner installed and no committed audit report. |
+| State of known vulnerabilities | not established | No scanner installed and no committed section report. |
 | Runtime, build, and test dependencies are separated | 4 | One runtime dependency; no development dependencies declared. |
 | Packages and tools are fetched safely | 2 | npx fetch outside the manifest (F-002). |
 | Install and build scripts are controlled | 3 | No lifecycle scripts in the project itself; third-party scripts are not restricted. |
@@ -246,4 +252,4 @@ Criteria describe the state; they do not change the score.
 
 ---
 
-Scores are computed by the smart-audit CLI from confirmed findings only. smart-audit 0.1.0, scoring v2.
+Scores are computed by the smart-review CLI from confirmed findings only. smart-review 2.0.0, scoring v3.

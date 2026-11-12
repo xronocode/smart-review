@@ -2,13 +2,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { computeScore, bandOf, WEIGHTS, CAPS, MEDIUM_TOTAL_MAX, LOW_TOTAL_MAX } from '../../skills/smart-audit/cli/lib/score.mjs';
-import { buildSummary } from '../../skills/smart-audit/cli/lib/report.mjs';
-import { main } from '../../skills/smart-audit/cli/smart-audit.mjs';
-import { validate } from '../../skills/smart-audit/cli/lib/validate.mjs';
+import { computeScore, bandOf, WEIGHTS, CAPS, MEDIUM_TOTAL_MAX, LOW_TOTAL_MAX } from '../../skills/smart-review/cli/lib/score.mjs';
+import { buildSummary } from '../../skills/smart-review/cli/lib/report.mjs';
+import { main } from '../../skills/smart-review/cli/smart-review.mjs';
+import { validate } from '../../skills/smart-review/cli/lib/validate.mjs';
 import { finding, findingsDoc, makeRepo, write, SKILL, read } from './helpers.mjs';
 
-const doc = (findings) => ({ audit: 'security', findings });
+const doc = (findings) => ({ section: 'security', findings });
 const f = (severity, over = {}) => finding(1, { severity, ...over });
 
 test('no findings scores 100 with no steps', () => {
@@ -52,12 +52,12 @@ test('info and low-confidence findings are listed but not deducted', () => {
 });
 
 test('an accepted risk removes low and medium deductions only', () => {
-  const accepted = [{ audit: 'security', key: 'sample-finding-1', reason: 'r' }, { audit: 'security', key: 'sample-finding-2', reason: 'r' }];
+  const accepted = [{ section: 'security', key: 'sample-finding-1', reason: 'r' }, { section: 'security', key: 'sample-finding-2', reason: 'r' }];
   const s = computeScore(doc([finding(1, { severity: 'medium' }), finding(2, { severity: 'high' })]), accepted);
   assert.equal(s.raw, 85);
   assert.deepEqual(s.notCounted, [{ id: 'F-001', reason: 'accepted-risk' }]);
-  const other = computeScore({ audit: 'tests', findings: [finding(1)] }, accepted);
-  assert.equal(other.value, 94, 'acceptance is scoped to its audit');
+  const other = computeScore({ section: 'tests', findings: [finding(1)] }, accepted);
+  assert.equal(other.value, 94, 'acceptance is scoped to its section');
 });
 
 test('low findings together deduct at most the limit', () => {
@@ -100,25 +100,25 @@ test('one high finding still outweighs any number of medium findings', () => {
   assert.equal(mixed.band, 'fair');
 });
 
-test('the overall score inherits the per-audit caps', () => {
-  const runMeta = { repo: { commit: 'a'.repeat(40), branch: 'main', dirty: false, name: 'demo' }, profile: 'quick', scoringVersion: '3', startedAt: '2026-11-12T00:00:00.000Z', audits: ['security', 'tests', 'dependencies', 'ai-readiness', 'hygiene'] };
-  const scored = (audit, findings) => {
-    const entry = { doc: { audit, rubricVersion: '1.0.0', verdict: 'v', summary: 's', findings } };
+test('the overall score inherits the per-section caps', () => {
+  const runMeta = { repo: { commit: 'a'.repeat(40), branch: 'main', dirty: false, name: 'demo' }, profile: 'quick', scoringVersion: '3', startedAt: '2026-11-12T00:00:00.000Z', sections: ['security', 'tests', 'dependencies', 'ai-readiness', 'hygiene'] };
+  const scored = (section, findings) => {
+    const entry = { doc: { section, rubricVersion: '1.0.0', verdict: 'v', summary: 's', findings } };
     entry.doc.score = computeScore(entry.doc);
     return entry;
   };
-  const run = (severity) => Object.fromEntries(runMeta.audits.map((id, i) => [id, i === 0 ? scored(id, [finding(1, { severity, key: `top-${severity}` })]) : scored(id, [])]));
+  const run = (severity) => Object.fromEntries(runMeta.sections.map((id, i) => [id, i === 0 ? scored(id, [finding(1, { severity, key: `top-${severity}` })]) : scored(id, [])]));
   let s = buildSummary(runMeta, run('critical'));
   assert.equal(s.overallRaw, 88);
-  assert.equal(s.overall, CAPS.critical, 'four clean audits plus a counted critical land in the poor band');
+  assert.equal(s.overall, CAPS.critical, 'four clean sections plus a counted critical land in the poor band');
   assert.deepEqual(s.overallCap, { value: CAPS.critical, reason: 'critical' });
   assert.equal(s.band, 'poor');
   s = buildSummary(runMeta, run('high'));
   assert.equal(s.overallRaw, 94);
-  assert.equal(s.overall, CAPS.high, 'four clean audits plus a counted high never read good');
+  assert.equal(s.overall, CAPS.high, 'four clean sections plus a counted high never read good');
   assert.deepEqual(s.overallCap, { value: CAPS.high, reason: 'high' });
   assert.equal(s.band, 'fair');
-  s = buildSummary(runMeta, Object.fromEntries(runMeta.audits.map((id) => [id, scored(id, [])])));
+  s = buildSummary(runMeta, Object.fromEntries(runMeta.sections.map((id) => [id, scored(id, [])])));
   assert.equal(s.overall, 100);
   assert.equal(s.overallCap, null);
 });

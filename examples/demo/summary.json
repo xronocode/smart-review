@@ -1,11 +1,16 @@
 {
-  "commit": "895cffb11905b081ced5bab6d18aff02f854da5a",
+  "commit": "b81099ba23c4dd039a8781ce57095209c12a22d1",
   "branch": "main",
   "profile": "quick",
-  "scoringVersion": "2",
+  "scoringVersion": "3",
   "overall": 67,
+  "overallRaw": 67,
+  "overallCap": {
+    "value": 69,
+    "reason": "high"
+  },
   "band": "fair",
-  "audits": {
+  "sections": {
     "security": {
       "score": 64,
       "band": "fair",

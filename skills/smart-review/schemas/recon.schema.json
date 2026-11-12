@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "smart-review recon map",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "commit", "summary", "languages", "manifests", "entryPoints", "surfaces", "tests", "ci", "docs", "agentFiles", "excluded", "tools", "limits"],
+  "properties": {
+    "schemaVersion": { "type": "integer", "enum": [1] },
+    "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "summary": { "type": "string", "minLength": 1 },
+    "languages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "files"],
+        "properties": { "name": { "type": "string" }, "files": { "type": "integer", "minimum": 0 } }
+      }
+    },
+    "frameworks": { "type": "array", "items": { "type": "string" } },
+    "manifests": { "type": "array", "items": { "$ref": "#/$defs/pathNote" } },
+    "entryPoints": { "type": "array", "items": { "$ref": "#/$defs/pathNote" } },
+    "surfaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "kind", "paths"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "kind": { "type": "string" },
+          "paths": { "type": "array", "items": { "type": "string" } },
+          "trustBoundary": { "type": "string" },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "tests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["roots", "commands"],
+      "properties": {
+        "roots": { "type": "array", "items": { "type": "string" } },
+        "commands": { "type": "array", "items": { "type": "string" } },
+        "note": { "type": "string" }
+      }
+    },
+    "ci": { "type": "array", "items": { "$ref": "#/$defs/pathNote" } },
+    "docs": { "type": "array", "items": { "$ref": "#/$defs/pathNote" } },
+    "agentFiles": { "type": "array", "items": { "$ref": "#/$defs/pathNote" } },
+    "excluded": { "type": "array", "items": { "$ref": "#/$defs/pathNote" } },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "available"],
+        "properties": { "name": { "type": "string" }, "available": { "type": "boolean" }, "version": { "type": "string" } }
+      }
+    },
+    "limits": { "type": "array", "items": { "type": "string" } }
+  },
+  "$defs": {
+    "pathNote": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path"],
+      "properties": { "path": { "type": "string", "minLength": 1 }, "note": { "type": "string" } }
+    }
+  }
+}

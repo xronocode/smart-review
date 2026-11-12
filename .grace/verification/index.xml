@@ -3,10 +3,10 @@
     <VD-MAIN>
       <Path>verification/main.xml</Path>
       <Owns>
-        <V-M-AUDIT-CLI />
-        <V-M-AUDIT-SKILL />
-        <V-M-AUDIT-RUBRICS />
-        <V-M-AUDIT-PLUGIN />
+        <V-M-SECTION-CLI />
+        <V-M-SECTION-SKILL />
+        <V-M-SECTION-RUBRICS />
+        <V-M-SECTION-PLUGIN />
       </Owns>
     </VD-MAIN>
   </VerificationDocuments>
