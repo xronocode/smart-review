@@ -1,6 +1,6 @@
 <GraceVerificationDocument graceVersion="4.0">
   <VD-MAIN>
-    <V-M-AUDIT-CLI>
+    <V-M-SECTION-CLI>
       <TestFiles>
         <File>tests/cli/score.test.mjs</File>
         <File>tests/cli/lint.test.mjs</File>
@@ -12,32 +12,33 @@
       <Scenario>A finding of the previous run must be still present or explained; diff separates new findings from ones missed earlier.</Scenario>
       <Scenario>The HTML report is one file with no scripts or external resources and escapes finding text.</Scenario>
       <TraceAssertion>node:test reports zero failing tests for tests/cli/*.test.mjs.</TraceAssertion>
-    </V-M-AUDIT-CLI>
-    <V-M-AUDIT-SKILL>
+    </V-M-SECTION-CLI>
+    <V-M-SECTION-SKILL>
       <TestFiles>
-        <File>tests/validate_audit.py</File>
+        <File>tests/validate_sections.py</File>
       </TestFiles>
       <Command>make validate</Command>
-      <Scenario>Every file the orchestrator names exists: SKILL.md, three agent prompts, four reference documents, three schemas, and the CLI entry.</Scenario>
+      <Scenario>Every file the dispatcher names exists: SKILL.md, both workflows, the reviewer agents of the changes section, the recon, inspector, and verifier prompts, four reference documents, three schemas, and the CLI entry.</Scenario>
+      <Scenario>The skill name in SKILL.md is smart-review, so installs made before the plugin upgrade in place.</Scenario>
       <Scenario>The scoring reference states the same formula, caps, and scoring version as the CLI.</Scenario>
-      <TraceAssertion>make validate prints "smart-audit structure OK" and exits zero.</TraceAssertion>
-    </V-M-AUDIT-SKILL>
-    <V-M-AUDIT-RUBRICS>
+      <TraceAssertion>make validate prints "Structure OK" and "Sections OK" and exits zero.</TraceAssertion>
+    </V-M-SECTION-SKILL>
+    <V-M-SECTION-RUBRICS>
       <TestFiles>
-        <File>tests/validate_audit.py</File>
+        <File>tests/validate_sections.py</File>
       </TestFiles>
       <Command>make validate</Command>
       <Scenario>Each rubric's prose headings list exactly the criterion ids of its criteria list, in the same order, with the same version and question.</Scenario>
       <Scenario>Profiles quick and full exist and name only shipped rubrics.</Scenario>
       <TraceAssertion>make validate prints "rubrics OK" with five rubric ids.</TraceAssertion>
-    </V-M-AUDIT-RUBRICS>
-    <V-M-AUDIT-PLUGIN>
+    </V-M-SECTION-RUBRICS>
+    <V-M-SECTION-PLUGIN>
       <TestFiles>
-        <File>tests/validate_audit.py</File>
+        <File>tests/validate_sections.py</File>
       </TestFiles>
       <Command>make validate</Command>
-      <Scenario>The plugin and marketplace manifests are valid JSON and the audit command file exists.</Scenario>
-      <TraceAssertion>make validate exits zero with .claude-plugin/plugin.json and commands/audit.md present.</TraceAssertion>
-    </V-M-AUDIT-PLUGIN>
+      <Scenario>The plugin and marketplace manifests are valid JSON and carry the package version; every section, plus full, quick, and update, has a command file with a quoted description, and every section has a row in the SKILL.md table.</Scenario>
+      <TraceAssertion>make validate exits zero with .claude-plugin/plugin.json and one commands/&lt;section&gt;.md per section present.</TraceAssertion>
+    </V-M-SECTION-PLUGIN>
   </VD-MAIN>
 </GraceVerificationDocument>

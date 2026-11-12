@@ -1,10 +1,10 @@
 # GRACE 4 Project Engineering Protocol
 
 ## Keywords
-code review, repository audit, agent skills, Claude Code plugin, findings schema, deterministic scoring, audit lint, evidence verification, npx
+code review, repository review, review sections, agent skills, Claude Code plugin, findings schema, deterministic scoring, lint, evidence verification, npx
 
 ## Annotation
-smart-review is an agent-agnostic skill pack for structured code review and commit-bound repository audits. Review answers "what is wrong with this change"; audit answers "what state is this repository in at this commit" and produces evidence-backed findings, a deterministic 0-100 score per audit, and a machine-verified report. It installs with `npx skills add xronocode/smart-review` into any agent and also ships as a thin Claude Code plugin.
+smart-review is an agent-agnostic review skill organised in sections and shipped as a Claude Code plugin. The `changes` section answers "what is wrong with this change"; the scored sections (security, tests, dependencies, AI readiness, hygiene) answer "what state is this repository in at this commit" and produce evidence-backed findings, a deterministic 0-100 score per section, and a machine-verified report. It installs with `npx skills add xronocode/smart-review` into any agent; the skill name stays `smart-review` so that existing installs upgrade in place.
 
 ## GRACE 4 Source of Truth
 

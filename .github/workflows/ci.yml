@@ -1,5 +1,5 @@
 # CI: structural validation of both skills, tests of the dependency-free
-# smart-audit CLI, link freshness, and a secret scan of git history.
+# smart-review CLI, link freshness, and a secret scan of git history.
 # No build step: the CLI is plain ES modules with no dependencies.
 name: ci
 
@@ -35,7 +35,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
-      - name: smart-audit CLI tests
+      - name: smart-review CLI tests
         run: make test
 
   links:

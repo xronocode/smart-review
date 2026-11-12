@@ -1,7 +1,7 @@
 {
   "name": "smart-review",
-  "description": "Structured multi-pass code review (smart-review) and commit-bound repository audit with deterministic scoring and machine-verified reports (smart-audit).",
-  "version": "1.3.0",
+  "description": "Section-based review for coding agents: changes (diff, branch, PR), security, tests, dependencies, AI readiness, and hygiene, with evidence-backed findings, deterministic scoring, and machine-verified reports.",
+  "version": "2.0.0",
   "author": {
     "name": "xronocode",
     "url": "https://github.com/xronocode"

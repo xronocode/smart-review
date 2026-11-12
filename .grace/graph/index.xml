@@ -3,10 +3,10 @@
     <GD-MAIN>
       <Path>graph/main.xml</Path>
       <Owns>
-        <M-AUDIT-CLI />
-        <M-AUDIT-SKILL />
-        <M-AUDIT-RUBRICS />
-        <M-AUDIT-PLUGIN />
+        <M-SECTION-CLI />
+        <M-SECTION-SKILL />
+        <M-SECTION-RUBRICS />
+        <M-SECTION-PLUGIN />
       </Owns>
     </GD-MAIN>
   </GraphDocuments>

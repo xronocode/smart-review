@@ -1,0 +1,92 @@
+<GraceChangePlan graceVersion="4.0" status="applied">
+  <C-SECTIONS-PLUGIN-V2>
+    <IntentSummary>Fold the scored repository review into the smart-review skill as sections, rename the unit of work to section across CLI, schemas, tests, and documents, add one plugin command per section, and release it as 2.0.0 with an upgrade path.</IntentSummary>
+    <BaselineAssertions>
+      <MustPassCommand>
+        <Command>make validate</Command>
+        <Command>make test</Command>
+      </MustPassCommand>
+    </BaselineAssertions>
+    <TargetAssertions>
+      <MustExist>
+        <Value>M-SECTION-CLI</Value>
+        <Value>M-SECTION-SKILL</Value>
+        <Value>M-SECTION-RUBRICS</Value>
+        <Value>M-SECTION-PLUGIN</Value>
+      </MustExist>
+      <MustVerify>
+        <Module>M-SECTION-CLI</Module>
+        <Module>M-SECTION-SKILL</Module>
+        <Module>M-SECTION-RUBRICS</Module>
+        <Module>M-SECTION-PLUGIN</Module>
+      </MustVerify>
+      <MustPassCommand>
+        <Command>make validate</Command>
+        <Command>make test</Command>
+      </MustPassCommand>
+    </TargetAssertions>
+    <DurableScope>
+      <GraphAnchors>
+        <M-SECTION-CLI />
+        <M-SECTION-SKILL />
+        <M-SECTION-RUBRICS />
+        <M-SECTION-PLUGIN />
+      </GraphAnchors>
+      <VerificationAnchors>
+        <V-M-SECTION-CLI />
+        <V-M-SECTION-SKILL />
+        <V-M-SECTION-RUBRICS />
+        <V-M-SECTION-PLUGIN />
+      </VerificationAnchors>
+    </DurableScope>
+    <ObservedWriteScope>
+      <Glob>skills/smart-review/**</Glob>
+      <Glob>commands/**</Glob>
+      <Glob>tests/**</Glob>
+      <Glob>examples/**</Glob>
+      <Glob>.claude-plugin/**</Glob>
+      <Glob>.grace/**</Glob>
+      <File>package.json</File>
+      <File>Makefile</File>
+      <File>README.md</File>
+      <File>CHANGELOG.md</File>
+      <File>SECURITY.md</File>
+      <File>AGENTS.md</File>
+      <File>.gitignore</File>
+      <File>.github/workflows/ci.yml</File>
+    </ObservedWriteScope>
+    <ImplementationPlan>
+      <T-001>
+        <Title>Move the scored review into skills/smart-review and rename the unit of work to section</Title>
+        <DependsOn></DependsOn>
+        <AcceptanceCriteria>
+          <Criterion>Agents, rubrics, references, schemas, and the CLI live under skills/smart-review; fields, flags, lint rule names, and report labels say section; tool names such as npm audit and cargo-audit are untouched.</Criterion>
+        </AcceptanceCriteria>
+        <Verification>
+          <Command>make test</Command>
+        </Verification>
+      </T-001>
+      <T-002>
+        <Title>Dispatcher, two workflows, and one command per section</Title>
+        <DependsOn>T-001</DependsOn>
+        <AcceptanceCriteria>
+          <Criterion>SKILL.md chooses sections and shows the plan; workflows/changes.md carries the former diff review with renamed modes; workflows/repository.md carries the scored sections; commands exist for every section and for full, quick, and update; the structure check enforces the pairing.</Criterion>
+        </AcceptanceCriteria>
+        <Verification>
+          <Command>make validate</Command>
+        </Verification>
+      </T-002>
+      <T-003>
+        <Title>Version 2.0.0, manifests, documents, example, and graph</Title>
+        <DependsOn>T-002</DependsOn>
+        <AcceptanceCriteria>
+          <Criterion>Package, CLI, and plugin manifests state 2.0.0; README and CHANGELOG describe sections and the upgrade from 1.x; the example report is regenerated; graph and verification entries are renamed and point at existing files.</Criterion>
+        </AcceptanceCriteria>
+        <Verification>
+          <Command>make validate</Command>
+          <Command>make test</Command>
+        </Verification>
+      </T-003>
+    </ImplementationPlan>
+  </C-SECTIONS-PLUGIN-V2>
+</GraceChangePlan>

@@ -7,16 +7,16 @@ import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { main } from '../skills/smart-audit/cli/smart-audit.mjs';
+import { main } from '../skills/smart-review/cli/smart-review.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const skill = join(here, '..', 'skills', 'smart-audit');
-const repo = mkdtempSync(join(tmpdir(), 'smart-audit-demo-'));
+const skill = join(here, '..', 'skills', 'smart-review');
+const repo = mkdtempSync(join(tmpdir(), 'smart-review-demo-'));
 const env = { ...process.env, GIT_AUTHOR_DATE: '2026-01-15T10:00:00Z', GIT_COMMITTER_DATE: '2026-01-15T10:00:00Z' };
 const git = (...a) => execFileSync('git', ['-C', repo, '-c', 'user.name=demo', '-c', 'user.email=demo@example.invalid', '-c', 'commit.gpgsign=false', ...a], { encoding: 'utf8', env }).trim();
 
 const files = {
-  'README.md': '# notes-api\n\nA tiny notes service used as an audit example.\n\n```\nnpm ci\nnpm test\n```\n',
+  'README.md': '# notes-api\n\nA tiny notes service used as a section example.\n\n```\nnpm ci\nnpm test\n```\n',
   'package.json': JSON.stringify({ name: 'notes-api', version: '0.3.0', type: 'module', scripts: { test: 'node --test', start: 'node src/server.js', export: 'npx json2csv-cli -i data/notes.json' }, dependencies: { express: '^4.19.2' } }, null, 2) + '\n',
   'src/server.js': [
     "import express from 'express';",
@@ -102,7 +102,7 @@ const crit = (id, map) => rubric(id).criteria.map((c) => {
   if (typeof v === 'string') return { id: c.id, status: v.startsWith('na:') ? 'na' : 'unknown', note: v.replace(/^(na|unknown): /, '') };
   return { id: c.id, status: 'scored', score: v[0], note: v[1] };
 });
-const base = (audit) => ({ schemaVersion: 1, audit, rubricVersion: rubric(audit).version, commit, lang: 'en' });
+const base = (section) => ({ schemaVersion: 1, section, rubricVersion: rubric(section).version, commit, lang: 'en' });
 const ok = (note) => ({ result: 'confirmed', note });
 
 const docs = {
@@ -138,7 +138,7 @@ const docs = {
       secrets: [5, 'No key formats or environment files among 6 tracked files.'], authn: [1, 'Identity is an unauthenticated header (F-003).'], authz: [1, 'List filters by owner; read by id does not (F-002).'],
       input: [3, 'JSON body parsing with default limits; note text is not validated.'], injection: 'na: No shell, query language, or template engine is used.', rendering: 'na: The service returns JSON only.',
       network: 'na: No outbound requests.', files: [1, 'Export path is built from the URL (F-001).'], crypto: 'na: No cryptography or update channel.',
-      supply: [3, 'The export script fetches a tool with npx outside the lockfile; reported in the dependency audit.'], logging: [4, 'No logging of request bodies.'],
+      supply: [3, 'The export script fetches a tool with npx outside the lockfile; reported in the dependency section.'], logging: [4, 'No logging of request bodies.'],
       hardening: [2, 'No security headers or limits configured in the repository.'], sectests: [0, 'No test pins ownership or path confinement.'],
     }),
     strengths: ['No secrets are tracked.', 'The notes list is filtered by owner.'],
@@ -149,7 +149,7 @@ const docs = {
   tests: {
     ...base('tests'),
     verdict: 'The suite would not catch a broken route or a broken ownership rule: only the in-memory store has tests, and one of the two is decorative.',
-    summary: 'Two tests exist, both for the store. Nothing exercises the HTTP routes, so the two security problems found in the security audit could be introduced or fixed without any test changing. The suite runs from a documented command and is deterministic. Coverage is not measured.',
+    summary: 'Two tests exist, both for the store. Nothing exercises the HTTP routes, so the two security problems found in the security section could be introduced or fixed without any test changing. The suite runs from a documented command and is deterministic. Coverage is not measured.',
     findings: [
       { id: 'F-001', key: 'http-routes-untested', title: 'No test exercises the HTTP routes', severity: 'high', confidence: 'high',
         what: 'The only test file imports the store module. The four routes in src/server.js, including ownership and file export, have no test.',
@@ -200,7 +200,7 @@ const docs = {
     ],
     unconfirmed: [],
     criteria: crit('dependencies', {
-      inventory: [4, 'One ecosystem, one manifest, plus one undeclared tool.'], reproducible: [0, 'No lockfile (F-001).'], vulnerabilities: 'unknown: No scanner installed and no committed audit report.',
+      inventory: [4, 'One ecosystem, one manifest, plus one undeclared tool.'], reproducible: [0, 'No lockfile (F-001).'], vulnerabilities: 'unknown: No scanner installed and no committed section report.',
       separation: [4, 'One runtime dependency; no development dependencies declared.'], acquisition: [2, 'npx fetch outside the manifest (F-002).'], scripts: [3, 'No lifecycle scripts in the project itself; third-party scripts are not restricted.'],
       freshness: 'unknown: Without a lockfile the installed versions are not determined.', footprint: [5, 'One dependency, used.'], licenses: 'unknown: The project declares no license.', updates: [0, 'No update automation.'],
     }),

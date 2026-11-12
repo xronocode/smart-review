@@ -3,5 +3,5 @@ reference/project-scan.json
 .DS_Store
 node_modules/
 
-# smart-audit run artifacts
-.smart-audit/
+# smart-review run artifacts
+.smart-review/

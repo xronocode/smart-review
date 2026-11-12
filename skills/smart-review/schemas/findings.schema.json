@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "smart-review findings document",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "section", "rubricVersion", "commit", "lang", "verdict", "summary", "findings", "unconfirmed", "criteria", "strengths", "checked", "limits", "tools"],
+  "properties": {
+    "schemaVersion": { "type": "integer", "enum": [1] },
+    "section": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "rubricVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "lang": { "type": "string", "enum": ["en", "ru"] },
+    "verdict": { "type": "string", "minLength": 1 },
+    "summary": { "type": "string", "minLength": 1 },
+    "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
+    "unconfirmed": { "type": "array", "items": { "$ref": "#/$defs/unconfirmed" } },
+    "criteria": { "type": "array", "items": { "$ref": "#/$defs/criterion" } },
+    "strengths": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "checked": { "type": "array", "items": { "$ref": "#/$defs/checked" } },
+    "limits": { "type": "array", "items": { "$ref": "#/$defs/limit" } },
+    "tools": { "type": "array", "items": { "$ref": "#/$defs/tool" } },
+    "previous": { "type": "array", "items": { "$ref": "#/$defs/previous" } },
+    "score": { "type": "object" }
+  },
+  "$defs": {
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "line"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "line": { "type": "integer", "minimum": 1 },
+        "endLine": { "type": "integer", "minimum": 1 },
+        "note": { "type": "string" }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "key", "title", "severity", "confidence", "what", "impact", "fix", "affected", "evidence", "verify", "verification"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^F-\\d{3}$" },
+        "key": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{2,79}$" },
+        "title": { "type": "string", "minLength": 1 },
+        "severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "info"] },
+        "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+        "what": { "type": "string", "minLength": 1 },
+        "impact": { "type": "string", "minLength": 1 },
+        "fix": { "type": "string", "minLength": 1 },
+        "affected": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "evidence": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/evidence" } },
+        "verify": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "origin": { "type": "string", "enum": ["new", "missed-earlier"] },
+        "verification": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["result", "note"],
+          "properties": {
+            "result": { "type": "string", "enum": ["confirmed", "downgraded", "upgraded"] },
+            "note": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "unconfirmed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "note"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "note": { "type": "string", "minLength": 1 },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } }
+      }
+    },
+    "criterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status", "note"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "status": { "type": "string", "enum": ["scored", "na", "unknown"] },
+        "score": { "type": "integer", "minimum": 0, "maximum": 5 },
+        "note": { "type": "string", "minLength": 1 }
+      }
+    },
+    "checked": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["area", "note"],
+      "properties": {
+        "area": { "type": "string", "minLength": 1 },
+        "note": { "type": "string", "minLength": 1 }
+      }
+    },
+    "limit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "effect"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1 },
+        "effect": { "type": "string", "minLength": 1 }
+      }
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "status"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "enum": ["used", "absent", "skipped"] },
+        "version": { "type": "string" },
+        "note": { "type": "string" }
+      }
+    },
+    "previous": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "status", "note"],
+      "properties": {
+        "key": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "enum": ["fixed", "still-present", "not-reproduced"] },
+        "note": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
