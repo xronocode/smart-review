@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Structural checks for the smart-review skill: rubric prose and criteria lists agree,
 profiles name real rubrics, every section has a plugin command and a row in SKILL.md,
-schemas and manifests are valid JSON with one version, and the scoring document states
-the constants the CLI uses."""
+schemas and manifests are valid JSON with one version, the README translations keep the
+shape of README.md, and the scoring document states the constants the CLI uses."""
 import json
 import re
 import sys
@@ -115,6 +115,26 @@ for cmd in ("full", "quick", "update"):
 for cmd in sorted(Path("commands").glob("*.md")):
     if not re.match(r"---\ndescription: \".+\"\n", cmd.read_text(encoding="utf-8")):
         fail(f"{cmd}: front matter must start with a quoted description")
+
+readme = Path("README.md").read_text(encoding="utf-8")
+
+
+def shape(text):
+    return {
+        "headings": len(re.findall(r"^#{2,3} ", text, re.M)),
+        "code blocks": len(re.findall(r"^```", text, re.M)) // 2,
+        "link targets": sorted(set(re.findall(r"\]\(([^)]+)\)", text)) - {"README.md", "README.ru.md", "README.zh-CN.md", "README.es.md"}),
+    }
+
+
+for tr in ("README.ru.md", "README.zh-CN.md", "README.es.md"):
+    if not Path(tr).exists():
+        fail(f"{tr} missing: the README ships in four languages")
+        continue
+    want, have = shape(readme), shape(Path(tr).read_text(encoding="utf-8"))
+    for key in want:
+        if want[key] != have[key]:
+            fail(f"{tr}: {key} differ from README.md; translate the change or the files drift apart")
 
 if pkg.get("dependencies") or pkg.get("devDependencies"):
     fail("package.json must not declare dependencies")

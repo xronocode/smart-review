@@ -44,6 +44,12 @@ named, every applicable section runs instead of the diff review alone.
 - **`SMART_REVIEW.md` guidance file and `.smart-review/accepted.json`**, both read from
   the reviewed commit and treated as untrusted input.
 - **Claude Code plugin and marketplace manifests**.
+- **README** rewritten around sections, with a section for agents and translations:
+  Русский, 简体中文, Español. `make validate` fails when a translation drifts from the
+  shape of `README.md`.
+- **Upstream links** of the `changes` section point at `anthropics/claude-plugins-official`,
+  where the source plugins moved; `make check-links` passes again.
+- The overall-score calculation shows the cap line only when the cap lowers the mean.
 - **CI**: CLI test job (46 tests); `make validate` checks the skill, the rubrics, and that
   every section has a command.
 - `package.json` (`@xronocode/smart-review`, private, not published).

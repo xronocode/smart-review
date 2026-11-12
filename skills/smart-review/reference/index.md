@@ -7,12 +7,12 @@
 
 | ID | File | Source URL | Last Updated |
 |----|------|-----------|--------------|
-| code-simplifier | agents/code-simplifier.md | https://raw.githubusercontent.com/anthropics/claude-code/main/plugins/pr-review-toolkit/agents/code-simplifier.md | 2026-05-10 |
-| code-reviewer | agents/excellence-reviewer.md | https://raw.githubusercontent.com/anthropics/claude-code/main/plugins/pr-review-toolkit/agents/code-reviewer.md | 2026-05-10 |
-| failure-hunter | agents/silent-failure-hunter.md | https://raw.githubusercontent.com/anthropics/claude-code/main/plugins/pr-review-toolkit/agents/silent-failure-hunter.md | 2026-05-10 |
-| comment-analyzer | — (not included) | https://raw.githubusercontent.com/anthropics/claude-code/main/plugins/pr-review-toolkit/agents/comment-analyzer.md | 2026-05-10 |
-| pr-test-analyzer | — (not included) | https://raw.githubusercontent.com/anthropics/claude-code/main/plugins/pr-review-toolkit/agents/pr-test-analyzer.md | 2026-05-10 |
-| type-design-analyzer | — (not included) | https://raw.githubusercontent.com/anthropics/claude-code/main/plugins/pr-review-toolkit/agents/type-design-analyzer.md | 2026-05-10 |
+| code-simplifier | agents/code-simplifier.md | https://raw.githubusercontent.com/anthropics/claude-plugins-official/main/plugins/pr-review-toolkit/agents/code-simplifier.md | 2026-05-10 |
+| code-reviewer | agents/excellence-reviewer.md | https://raw.githubusercontent.com/anthropics/claude-plugins-official/main/plugins/pr-review-toolkit/agents/code-reviewer.md | 2026-05-10 |
+| failure-hunter | agents/silent-failure-hunter.md | https://raw.githubusercontent.com/anthropics/claude-plugins-official/main/plugins/pr-review-toolkit/agents/silent-failure-hunter.md | 2026-05-10 |
+| comment-analyzer | — (not included) | https://raw.githubusercontent.com/anthropics/claude-plugins-official/main/plugins/pr-review-toolkit/agents/comment-analyzer.md | 2026-05-10 |
+| pr-test-analyzer | — (not included) | https://raw.githubusercontent.com/anthropics/claude-plugins-official/main/plugins/pr-review-toolkit/agents/pr-test-analyzer.md | 2026-05-10 |
+| type-design-analyzer | — (not included) | https://raw.githubusercontent.com/anthropics/claude-plugins-official/main/plugins/pr-review-toolkit/agents/type-design-analyzer.md | 2026-05-10 |
 
 ## Reference Guides
 
@@ -20,7 +20,7 @@
 |----|------|-----------|--------------|
 | anthropic-prompting | reference/anthropic-prompting.md | https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct | 2026-05-10 |
 | anthropic-opus47 | reference/anthropic-opus47.md | https://docs.anthropic.com/en/docs/about-claude/models | 2026-05-10 |
-| frontend-design | reference/frontend-design.md | https://raw.githubusercontent.com/anthropics/claude-code/main/plugins/frontend-design/skills/frontend-design/SKILL.md | 2026-05-10 |
+| frontend-design | reference/frontend-design.md | https://raw.githubusercontent.com/anthropics/claude-plugins-official/main/plugins/frontend-design/skills/frontend-design/SKILL.md | 2026-05-10 |
 | typescript | reference/typescript.md | local (derived from excellence-reviewer + best practices) | 2026-05-10 |
 | react | reference/react.md | local (derived from excellence-reviewer + best practices) | 2026-05-10 |
 | vue | reference/vue.md | local (derived from best practices) | 2026-05-10 |
