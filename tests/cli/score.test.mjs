@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { computeScore, bandOf, WEIGHTS, CAPS, LOW_TOTAL_MAX } from '../../skills/smart-audit/cli/lib/score.mjs';
+import { computeScore, bandOf, WEIGHTS, CAPS, MEDIUM_TOTAL_MAX, LOW_TOTAL_MAX } from '../../skills/smart-audit/cli/lib/score.mjs';
+import { buildSummary } from '../../skills/smart-audit/cli/lib/report.mjs';
 import { main } from '../../skills/smart-audit/cli/smart-audit.mjs';
 import { validate } from '../../skills/smart-audit/cli/lib/validate.mjs';
 import { finding, findingsDoc, makeRepo, write, SKILL, read } from './helpers.mjs';
@@ -72,6 +73,54 @@ test('low findings together deduct at most the limit', () => {
 
 test('bands split at 70 and 40', () => {
   assert.deepEqual([100, 70, 69, 40, 39, 0].map(bandOf), ['good', 'good', 'fair', 'fair', 'poor', 'poor']);
+});
+
+test('medium findings together deduct at most the limit', () => {
+  const meds = (n) => Array.from({ length: n }, (_, i) => finding(i + 1, { severity: 'medium', key: `med-${i}` }));
+  const ten = computeScore(doc(meds(10)));
+  assert.equal(ten.scoringVersion, '3');
+  assert.equal(ten.value, 100 - MEDIUM_TOTAL_MAX);
+  assert.equal(ten.band, 'good');
+  assert.deepEqual(ten.steps, [{ severity: 'medium', count: 10, weight: 6, subtotal: 30, running: 70, limited: 30 }]);
+  const eleven = computeScore(doc(meds(11)));
+  assert.equal(eleven.value, ten.value, 'the eleventh medium changes nothing');
+  assert.deepEqual(eleven.steps.map((s) => [s.subtotal, s.limited]), [[30, 30]]);
+  assert.deepEqual(computeScore(doc(meds(10))), ten, 'the same findings score identically');
+});
+
+test('one high finding still outweighs any number of medium findings', () => {
+  const meds = (n) => Array.from({ length: n }, (_, i) => finding(i + 1, { severity: 'medium', key: `med-${i}` }));
+  const lows = (n) => Array.from({ length: n }, (_, i) => finding(50 + i, { severity: 'low', key: `low-${i}` }));
+  const mediumOnly = computeScore(doc(meds(50)));
+  assert.equal(mediumOnly.value, 100 - MEDIUM_TOTAL_MAX, 'medium findings alone never leave the good band');
+  assert.ok(mediumOnly.value > computeScore(doc([f('high')])).value, 'one counted high scores below any medium-only run');
+  assert.ok(WEIGHTS.high > LOW_TOTAL_MAX, 'one high finding weighs more than all low findings together');
+  const mixed = computeScore(doc([...meds(10), ...lows(20)]));
+  assert.equal(mixed.value, 100 - MEDIUM_TOTAL_MAX - LOW_TOTAL_MAX);
+  assert.equal(mixed.band, 'fair');
+});
+
+test('the overall score inherits the per-audit caps', () => {
+  const runMeta = { repo: { commit: 'a'.repeat(40), branch: 'main', dirty: false, name: 'demo' }, profile: 'quick', scoringVersion: '3', startedAt: '2026-11-12T00:00:00.000Z', audits: ['security', 'tests', 'dependencies', 'ai-readiness', 'hygiene'] };
+  const scored = (audit, findings) => {
+    const entry = { doc: { audit, rubricVersion: '1.0.0', verdict: 'v', summary: 's', findings } };
+    entry.doc.score = computeScore(entry.doc);
+    return entry;
+  };
+  const run = (severity) => Object.fromEntries(runMeta.audits.map((id, i) => [id, i === 0 ? scored(id, [finding(1, { severity, key: `top-${severity}` })]) : scored(id, [])]));
+  let s = buildSummary(runMeta, run('critical'));
+  assert.equal(s.overallRaw, 88);
+  assert.equal(s.overall, CAPS.critical, 'four clean audits plus a counted critical land in the poor band');
+  assert.deepEqual(s.overallCap, { value: CAPS.critical, reason: 'critical' });
+  assert.equal(s.band, 'poor');
+  s = buildSummary(runMeta, run('high'));
+  assert.equal(s.overallRaw, 94);
+  assert.equal(s.overall, CAPS.high, 'four clean audits plus a counted high never read good');
+  assert.deepEqual(s.overallCap, { value: CAPS.high, reason: 'high' });
+  assert.equal(s.band, 'fair');
+  s = buildSummary(runMeta, Object.fromEntries(runMeta.audits.map((id) => [id, scored(id, [])])));
+  assert.equal(s.overall, 100);
+  assert.equal(s.overallCap, null);
 });
 
 test('score command is idempotent on disk', () => {

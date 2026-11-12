@@ -4,6 +4,8 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { main } from '../../skills/smart-audit/cli/smart-audit.mjs';
+import { computeScore, SCORING_VERSION } from '../../skills/smart-audit/cli/lib/score.mjs';
+import { buildSummary, renderMarkdown } from '../../skills/smart-audit/cli/lib/report.mjs';
 import { diffRuns } from '../../skills/smart-audit/cli/lib/diff.mjs';
 import { finding, findingsDoc, makeRepo, write, read, CLI } from './helpers.mjs';
 
@@ -27,17 +29,24 @@ test('finish writes summary, Markdown, and one self-contained HTML file', () => 
     const summary = read(join(fx.run.runDir, 'summary.json'));
     assert.deepEqual(Object.fromEntries(Object.entries(summary.audits).map(([k, v]) => [k, v.score])), { security: 69, tests: 100, dependencies: 94 });
     assert.deepEqual(Object.keys(summary.audits), ['security', 'tests', 'dependencies'], 'audits keep the order of the run');
-    assert.equal(summary.overall, 88);
-    assert.equal(summary.band, 'good');
+    assert.equal(summary.overallRaw, 88, 'the rounded mean before the overall cap');
+    assert.equal(summary.overall, 69, 'a counted high finding caps the overall score');
+    assert.deepEqual(summary.overallCap, { value: 69, reason: 'high' });
+    assert.equal(summary.band, 'fair');
     const html = readFileSync(join(fx.run.runDir, 'report.html'), 'utf8');
     assert.ok(html.startsWith('<!doctype html>'));
     assert.ok(!/<script|<link|<img|src=|url\(|@import|https?:\/\//i.test(html), 'no scripts or external resources');
     assert.ok(html.includes('prefers-color-scheme:dark'));
     assert.ok(html.includes('Unchecked &lt;script&gt; &amp; &quot;quotes&quot;'), 'content is escaped');
     assert.ok(html.includes('69/100') && html.includes('Cap applied'));
+    assert.ok(html.includes('Mean of the audits that ran'));
+    assert.ok(html.includes('a high finding caps the overall score at 69'));
     assert.ok(html.includes('src/app.js:3'));
     const md = readFileSync(join(fx.run.runDir, 'report.md'), 'utf8');
-    assert.ok(md.includes('**Overall score: 88/100**'));
+    assert.ok(md.includes('**Overall score: 69/100**'));
+    assert.ok(md.includes('### Overall score calculation'));
+    assert.ok(md.includes('Mean of the audits that ran: 88'));
+    assert.ok(md.includes('Cap applied: a high finding caps the overall score at 69 → 69'));
     assert.ok(md.includes('High: 1 × 15 = −15 → 85'));
     assert.ok(md.includes('Secrets and credentials'));
   } finally {
@@ -50,7 +59,9 @@ test('report language follows the run and keeps paths untranslated', () => {
   try {
     assert.equal(main(['finish', fx.run.runDir, '--repo', fx.repo], quiet), 0);
     const md = readFileSync(join(fx.run.runDir, 'report.md'), 'utf8');
-    assert.ok(md.includes('Общий балл: 88/100'));
+    assert.ok(md.includes('Общий балл: 69/100'));
+    assert.ok(md.includes('Среднее по запущенным аудитам: 88'));
+    assert.ok(md.includes('Применён потолок: высокая находка ограничивает общий балл значением 69 → 69'));
     assert.ok(md.includes('Секреты и учётные данные'));
     assert.ok(md.includes('`src/app.js:3`'));
     assert.ok(readFileSync(join(fx.run.runDir, 'report.html'), 'utf8').includes('<html lang="ru">'));
@@ -82,6 +93,53 @@ test('diff separates new findings from ones the previous run missed', () => {
   assert.equal(d.items[0].severityBefore, 'medium');
   assert.equal(d.delta, -2);
   assert.equal(d.comparable, true);
+});
+
+test('the calculation names the medium limit, the low limit, and the overall cap', () => {
+  const r = makeRepo();
+  try {
+    const lines = [];
+    main(['start', '--repo', r.repo, '--profile', 'quick', '--lang', 'en'], (l) => lines.push(l));
+    const run = JSON.parse(lines.join('\n'));
+    const med = (i) => finding(i + 1, { severity: 'medium', key: `med-${i}`, id: `F-${String(i + 1).padStart(3, '0')}` });
+    const low = (i) => finding(i + 1, { severity: 'low', key: `low-${i}`, id: `F-${String(i + 11).padStart(3, '0')}` });
+    const meds = Array.from({ length: 10 }, (_, i) => med(i));
+    const lows = Array.from({ length: 20 }, (_, i) => low(i));
+    write(join(run.runDir, 'security.findings.json'), findingsDoc('security', r.commit, [finding(1, { severity: 'high' })]));
+    write(join(run.runDir, 'tests.findings.json'), findingsDoc('tests', r.commit, [...meds, ...lows]));
+    write(join(run.runDir, 'dependencies.findings.json'), findingsDoc('dependencies', r.commit, []));
+    assert.equal(main(['finish', run.runDir, '--repo', r.repo], quiet), 0);
+    const summary = read(join(run.runDir, 'summary.json'));
+    assert.deepEqual(summary.overallCap, { value: 69, reason: 'high' });
+    assert.equal(summary.overallRaw, 75);
+    assert.equal(summary.overall, 69);
+    const md = readFileSync(join(run.runDir, 'report.md'), 'utf8');
+    assert.ok(md.includes('Medium: 10 × 6 (at most 30) = −30 → 70'), 'the medium limit is a named step');
+    assert.ok(md.includes('Low: 20 × 2 (at most 14) = −14 → 56'), 'the low limit is a named step');
+    assert.ok(md.includes('Mean of the audits that ran: 75'));
+    assert.ok(md.includes('Cap applied: a high finding caps the overall score at 69 → 69'), 'the overall cap is a named step');
+    const html = readFileSync(join(run.runDir, 'report.html'), 'utf8');
+    assert.ok(html.includes('at most 30') && html.includes('at most 14'));
+    assert.ok(html.includes('a high finding caps the overall score at 69'));
+    assert.ok(html.includes('medium findings together at most 30'), 'the footer names the medium limit');
+  } finally {
+    r.cleanup();
+  }
+});
+
+test('a scoring version difference marks runs not comparable and the report says so', () => {
+  const commit = 'a'.repeat(40);
+  const run = { repo: { commit, branch: 'main', dirty: false, name: 'demo' }, profile: 'quick', scoringVersion: SCORING_VERSION, startedAt: '2026-11-12T00:00:00.000Z', audits: ['security'], toolVersion: '0.1.0', lang: 'en' };
+  const curDoc = { ...findingsDoc('security', commit, [finding(1)]), previous: [{ key: 'gone', status: 'not-reproduced', note: 'n' }] };
+  curDoc.score = computeScore({ audit: 'security', findings: curDoc.findings });
+  const prevDoc = { ...findingsDoc('security', commit, [finding(1), finding(2, { key: 'gone' })]) };
+  prevDoc.score = { ...computeScore({ audit: 'security', findings: prevDoc.findings }), scoringVersion: '2' };
+  const cur = { run, docs: { security: { doc: curDoc } } };
+  const prev = { run: { ...run, repo: { ...run.repo, commit: 'b'.repeat(40) } }, docs: { security: { doc: prevDoc } } };
+  const diff = diffRuns(cur, prev);
+  assert.equal(diff.audits.security.comparable, false);
+  const md = renderMarkdown({ run, docs: cur.docs, rubrics: {}, summary: buildSummary(run, cur.docs), diff, lang: 'en' });
+  assert.ok(md.includes('Rubric or scoring version changed; scores are not directly comparable.'));
 });
 
 test('the CLI runs as a standalone executable', () => {

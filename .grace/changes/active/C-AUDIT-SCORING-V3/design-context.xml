@@ -1,0 +1,17 @@
+<GraceChangeDesignContext graceVersion="4.0">
+  <Change>C-AUDIT-SCORING-V3</Change>
+  <NormativeStatus>non-normative</NormativeStatus>
+  <Rationale>The low-finding limit of 14 (scoring version 2) solved one half of a general problem: an aggregate of small findings should not outweigh the severity ladder. Medium findings have the same structural problem with a different symptom: a thorough audit that confirms six or eight real medium findings scores lower than a shallow audit that confirms two, although the repository state is identical. The limit of 30 keeps the ladder property (30 is less than one critical's 40 and more than one high's 15) while bounding the total effect: 100 minus 30 is 70, so mediums alone never demote an audit out of the good band. The overall cap closes the symmetric gap at the aggregate level: the per-audit formula already promises that a confirmed critical always lands in the poor band and a confirmed high can never be good, and an unbounded mean of audit scores breaks both promises; reusing the same cap values makes the rule one sentence at every level of the report.</Rationale>
+  <Alternatives>
+    <Alternative>Diminishing per-finding weights for repeated severities: harder to recompute by hand and harder to explain in the report than a hard limit.</Alternative>
+    <Alternative>Density-based scoring (findings per surface or per KLOC): requires a coverage model the audit does not yet have; revisit together with coverage accounting.</Alternative>
+    <Alternative>Weighted mean across audits (security above hygiene): hides the aggregation from the reader and invites tuning debates the project cannot settle with data yet.</Alternative>
+  </Alternatives>
+  <DeferredDecisions>
+    <Decision>Coverage accounting: recon enumerates surfaces (IPC commands, CI jobs, user-facing features) and lint requires a per-surface status from each audit, turning silent skips into visible ones; expected to raise single-pass recall.</Decision>
+    <Decision>Blind-run validation: run the rubrics on 2-3 unfamiliar open-source repositories with manual labeling; rubric 1.1.0 was tuned against one repository's reference reports.</Decision>
+    <Decision>Incremental runs: carry findings across commits with automatic line remapping for untouched hunks, so repeat audits pay only for what changed.</Decision>
+    <Decision>Stability command: a smart-audit command comparing two independent runs on the same commit, reporting agreement as a number.</Decision>
+    <Decision>Report size: report.md can exceed 500 KB on finding-rich runs; consider collapsing open questions and criteria tables in the Markdown rendering.</Decision>
+  </DeferredDecisions>
+</GraceChangeDesignContext>

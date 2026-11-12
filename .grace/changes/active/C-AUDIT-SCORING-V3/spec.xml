@@ -1,0 +1,51 @@
+<GraceChangeSpec graceVersion="4.0" status="approved">
+  <C-AUDIT-SCORING-V3>
+    <Summary>Scoring version 3: bound the total deduction of medium findings and apply the per-audit band caps to the overall score, so a more thorough audit can no longer score lower than a shallow one and a confirmed critical or high finding can no longer hide behind clean audits.</Summary>
+    <Problem>Two calibration defects, both shown by real full-profile runs and both acknowledged in the change journal as open. First, medium findings have no aggregate limit: a run with one high and six medium findings scored 35 ("poor") for a test suite that an independent reference rated 83, because every medium beyond the first five kept deducting 6 points — the more carefully the audit looks, the lower the score, which punishes thoroughness. Second, the overall score is an unbounded mean of audit scores: a repository with a confirmed critical finding in one audit and clean results in the other four would average 80 and read "good", although the per-audit formula states that a confirmed critical always lands in the poor band. The formula's own band promises are broken at the aggregate level.</Problem>
+    <Goals>
+      <Goal>Medium findings together deduct at most 30 points in one audit, in addition to the existing 14-point limit for low findings.</Goal>
+      <Goal>The overall score inherits the per-audit caps: if any audit that ran has a counted critical finding, the overall score is at most 39; otherwise, if any audit has a counted high finding, the overall score is at most 69.</Goal>
+      <Goal>Counting rules (which findings are counted) stay exactly as in scoring version 2.</Goal>
+      <Goal>SCORING_VERSION becomes 3; the score calculation shown in reports renders the new limits and caps as explicit steps.</Goal>
+      <Goal>reference/scoring.md documents version 3: the formula, why 30 and why the overall caps, and updated band meanings.</Goal>
+      <Goal>CLI tests on node:test cover both limits with synthetic fixtures, including the determinism check (same findings scored twice give the same score).</Goal>
+    </Goals>
+    <Constraints>
+      <Constraint>Weights stay 40/15/6/2 and deductions stay linear apart from the aggregate limits; no severity re-weighting.</Constraint>
+      <Constraint>Band thresholds stay 0-39 poor, 40-69 fair, 70-100 good; only their wording may change to match the new reachable combinations.</Constraint>
+      <Constraint>The formula stays implementable as deterministic arithmetic recomputable by hand from the findings list; the report prints every step.</Constraint>
+      <Constraint>Scores are comparable only within the same scoring version; report and diff surface a version difference, as they already do for rubric versions.</Constraint>
+      <Constraint>Test fixtures are synthetic; no findings or numbers from audits of private repositories enter this repository.</Constraint>
+      <Constraint>Only skills/smart-audit CLI scoring, its tests, and its scoring reference change; rubrics, agents, schemas, and the review skill are untouched.</Constraint>
+    </Constraints>
+    <NonGoals>
+      <NonGoal>Density-based or per-surface scoring; criteria-weighted scores.</NonGoal>
+      <NonGoal>Changing severity weights, confidence handling, accepted-risks rules, or band thresholds.</NonGoal>
+      <NonGoal>Migrating or rescoring runs recorded under earlier scoring versions; recorded runs keep their recorded score and version.</NonGoal>
+      <NonGoal>Rubric changes, recall improvements, or cross-run coverage accounting (tracked separately as deferred directions).</NonGoal>
+    </NonGoals>
+    <AcceptanceCriteria>
+      <Criterion>A synthetic findings document with ten counted medium findings and nothing else deducts exactly 30 points; the eleventh medium changes nothing.</Criterion>
+      <Criterion>A synthetic run with four clean audits (100 each) and one audit holding a counted critical finding yields an overall score of at most 39; the same run with a counted high instead of the critical yields at most 69.</Criterion>
+      <Criterion>A mixed fixture reproducing the ladder property: one high finding still outweighs any number of medium findings and the 14-point low limit.</Criterion>
+      <Criterion>Scoring the same findings file twice produces the same score and identical file content.</Criterion>
+      <Criterion>report renders the medium limit and each applied cap as named steps of the calculation.</Criterion>
+      <Criterion>Comparing runs with different scoring versions emits the existing version-mismatch note, under a node:test.</Criterion>
+      <Criterion>make validate and make test pass; existing tests are updated for version 3 expectations rather than deleted.</Criterion>
+    </AcceptanceCriteria>
+    <AffectedAreas>
+      <M-AUDIT-CLI />
+      <M-AUDIT-SKILL />
+    </AffectedAreas>
+    <VerificationIntent>
+      <ExpectedCommand>make test</ExpectedCommand>
+      <ExpectedCommand>make validate</ExpectedCommand>
+      <ExpectedEvidence>node:test suites for score and report show the new limit and cap cases green with the rule names asserted; determinism test unchanged and green; no fixture references a private repository.</ExpectedEvidence>
+    </VerificationIntent>
+    <Assumptions>
+      <Assumption>The medium limit of 30 is chosen so that medium findings alone can never push a score out of the good band (100 - 30 = 70), matching the existing choice of 14 for low findings (100 - 14 = 86, less than one high finding's weight).</Assumption>
+      <Assumption>The overall caps reuse the per-audit cap values, so the reader can state one rule at both levels: a counted critical means poor, a counted high can never be good.</Assumption>
+      <Assumption>Calibration feedback beyond these two defects (recall, coverage accounting, blind-run validation) is deferred by the maintainer to later changes.</Assumption>
+    </Assumptions>
+  </C-AUDIT-SCORING-V3>
+</GraceChangeSpec>

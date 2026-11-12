@@ -1,0 +1,81 @@
+<GraceChangePlan graceVersion="4.0" status="approved">
+  <C-AUDIT-SCORING-V3>
+    <IntentSummary>Scoring version 3 in the smart-audit CLI: an aggregate limit of 30 points for medium findings, band caps applied to the overall score, updated calculation rendering and scoring documentation, all under node:test coverage, without touching rubrics, agents, schemas, or the review skill.</IntentSummary>
+    <BaselineAssertions>
+      <MustExist>
+        <Value>M-AUDIT-CLI</Value>
+        <Value>M-AUDIT-SKILL</Value>
+      </MustExist>
+      <MustPassCommand>
+        <Command>make validate</Command>
+        <Command>make test</Command>
+      </MustPassCommand>
+    </BaselineAssertions>
+    <TargetAssertions>
+      <MustExist>
+        <Value>M-AUDIT-CLI</Value>
+        <Value>M-AUDIT-SKILL</Value>
+      </MustExist>
+      <MustVerify>
+        <Module>M-AUDIT-CLI</Module>
+        <Module>M-AUDIT-SKILL</Module>
+      </MustVerify>
+      <MustPassCommand>
+        <Command>make validate</Command>
+        <Command>make test</Command>
+      </MustPassCommand>
+    </TargetAssertions>
+    <DurableScope>
+      <GraphAnchors>
+        <M-AUDIT-CLI />
+        <M-AUDIT-SKILL />
+      </GraphAnchors>
+      <VerificationAnchors>
+        <V-M-AUDIT-CLI />
+        <V-M-AUDIT-SKILL />
+      </VerificationAnchors>
+    </DurableScope>
+    <ObservedWriteScope>
+      <Glob>skills/smart-audit/cli/**</Glob>
+      <Glob>tests/cli/**</Glob>
+      <File>skills/smart-audit/reference/scoring.md</File>
+      <File>CHANGELOG.md</File>
+    </ObservedWriteScope>
+    <ImplementationPlan>
+      <T-001>
+        <Title>Scoring version 3 core: medium limit and overall caps</Title>
+        <DependsOn></DependsOn>
+        <AcceptanceCriteria>
+          <Criterion>cli/lib/score.mjs raises SCORING_VERSION to 3, caps the total medium deduction at 30 and the total low deduction at 14 per audit, and caps the overall score at 39 when any audit has a counted critical finding and at 69 when any has a counted high finding; counting rules are unchanged.</Criterion>
+          <Criterion>node:test cases cover: ten mediums deduct exactly 30; the eleventh medium changes nothing; a run of four clean audits plus one audit with a counted critical yields an overall score of at most 39; the same run with a counted high yields at most 69; scoring the same findings twice yields the same score and identical file content.</Criterion>
+        </AcceptanceCriteria>
+        <Verification>
+          <Command>make test</Command>
+        </Verification>
+      </T-001>
+      <T-002>
+        <Title>Report renders the new limits and caps as calculation steps</Title>
+        <DependsOn>T-001</DependsOn>
+        <AcceptanceCriteria>
+          <Criterion>The calculation shown in report.md and report.html names the medium limit and each applied cap as steps, and a node:test asserts the step text for a fixture that triggers all three limits (medium cap, low cap, overall cap).</Criterion>
+          <Criterion>Comparing runs with different scoring versions emits the version-mismatch note, under a node:test.</Criterion>
+        </AcceptanceCriteria>
+        <Verification>
+          <Command>make test</Command>
+        </Verification>
+      </T-002>
+      <T-003>
+        <Title>Scoring reference and changelog for version 3</Title>
+        <DependsOn>T-001</DependsOn>
+        <AcceptanceCriteria>
+          <Criterion>reference/scoring.md documents version 3: the formula, the rationale for 30 and for the overall caps, updated band meanings, and a version history entry; existing version-2 expectations in tests are updated, not deleted.</Criterion>
+          <Criterion>CHANGELOG.md gains an entry describing scoring version 3 and its effect on comparability.</Criterion>
+        </AcceptanceCriteria>
+        <Verification>
+          <Command>make validate</Command>
+          <Command>make test</Command>
+        </Verification>
+      </T-003>
+    </ImplementationPlan>
+  </C-AUDIT-SCORING-V3>
+</GraceChangePlan>

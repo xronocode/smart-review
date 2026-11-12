@@ -10,18 +10,24 @@
 //   SEVERITIES - severity names from most to least severe
 //   WEIGHTS - points deducted per counted finding of each severity
 //   CAPS - highest score allowed with a critical or a high finding
+//   MEDIUM_TOTAL_MAX - largest total deduction for medium findings
 //   LOW_TOTAL_MAX - largest total deduction for low findings
 //   BANDS - score bands and their lower bounds
 //   bandOf - band name for a 0-100 value
 //   computeScore - score object for a findings document
+//   overallCap - the cap the overall score inherits from the audits that ran
 // END_MODULE_MAP
 
-export const SCORING_VERSION = '2';
+export const SCORING_VERSION = '3';
 export const SEVERITIES = ['critical', 'high', 'medium', 'low', 'info'];
 export const WEIGHTS = { critical: 40, high: 15, medium: 6, low: 2, info: 0 };
 export const CAPS = { critical: 39, high: 69 };
+// Medium findings together never deduct more than this, so medium findings alone can
+// never push the score out of the good band (100 - 30 = 70).
+export const MEDIUM_TOTAL_MAX = 30;
 // Low findings together never deduct more than this: less than one high finding.
 export const LOW_TOTAL_MAX = 14;
+const TOTAL_MAX = { medium: MEDIUM_TOTAL_MAX, low: LOW_TOTAL_MAX };
 export const BANDS = [
   { name: 'good', min: 70 },
   { name: 'fair', min: 40 },
@@ -60,10 +66,11 @@ export function computeScore(doc, accepted = []) {
   for (const sev of ['critical', 'high', 'medium', 'low']) {
     if (!counts[sev]) continue;
     const full = counts[sev] * WEIGHTS[sev];
-    const subtotal = sev === 'low' ? Math.min(full, LOW_TOTAL_MAX) : full;
+    const limit = TOTAL_MAX[sev];
+    const subtotal = limit === undefined ? full : Math.min(full, limit);
     running -= subtotal;
     const step = { severity: sev, count: counts[sev], weight: WEIGHTS[sev], subtotal, running: Math.max(0, running) };
-    if (subtotal < full) step.limited = LOW_TOTAL_MAX;
+    if (subtotal < full) step.limited = limit;
     steps.push(step);
   }
   const raw = Math.max(0, running);
@@ -72,4 +79,21 @@ export function computeScore(doc, accepted = []) {
   else if (!counts.critical && counts.high && raw > CAPS.high) cap = { value: CAPS.high, reason: 'high' };
   const value = cap ? cap.value : raw;
   return { scoringVersion: SCORING_VERSION, base: 100, steps, raw, cap, value, band: bandOf(value), notCounted };
+}
+
+// START_CONTRACT: overallCap
+//   PURPOSE: The band cap the overall score inherits, so the per-audit promises hold at the run level too.
+//   INPUTS: { scores: Array - per-audit score objects, or null for audits without a score }
+//   OUTPUTS: { { value, reason } | null - 39 with a counted critical in any audit, otherwise 69 with a counted high }
+//   SIDE_EFFECTS: none
+// END_CONTRACT: overallCap
+export function overallCap(scores) {
+  let cap = null;
+  for (const s of scores || []) {
+    if (!s) continue;
+    const counted = Object.fromEntries((s.steps || []).map((t) => [t.severity, t.count]));
+    if (counted.critical) return { value: CAPS.critical, reason: 'critical' };
+    if (counted.high) cap = { value: CAPS.high, reason: 'high' };
+  }
+  return cap;
 }
