@@ -50,6 +50,10 @@ named, every applicable section runs instead of the diff review alone.
 - **Upstream links** of the `changes` section point at `anthropics/claude-plugins-official`,
   where the source plugins moved; `make check-links` passes again.
 - The overall-score calculation shows the cap line only when the cap lowers the mean.
+- **Agent instructions tightened after a full run of 2.0**: what a draft may omit, how to
+  account for findings of a previous run (`origin`, `previous`, promoted leads), how deep
+  to go when little changed since the previous commit, how to treat carried-over
+  verification notes and counts that depend on the counting method, and what recon may run.
 - **CI**: CLI test job (46 tests); `make validate` checks the skill, the rubrics, and that
   every section has a command.
 - `package.json` (`@xronocode/smart-review`, private, not published).

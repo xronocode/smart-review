@@ -21,7 +21,7 @@ must contain. The schema says what is *allowed*; this says what is *good*.
 | `strengths` | controls and practices worth keeping, each a concrete sentence |
 | `checked` | what you actually traced, as `{area, note}` |
 | `limits` | what you did not run or read, as `{text, effect}` |
-| `tools` | every optional tool named by the rubric, as `used`, `absent`, or `skipped` |
+| `tools` | every optional tool named by the rubric, as `used`, `absent`, or `skipped`; `[]` when the rubric names none |
 | `previous` | accounting for the previous run's findings (only when a previous run exists) |
 | `score` | **written by the CLI only.** Never write or edit it. |
 
@@ -43,7 +43,7 @@ A finding is a confirmed, independent problem with evidence on the reviewed comm
 | `evidence` | one or more `{path, line}` on the reviewed commit; start with the line where the problem is, then supporting lines |
 | `verify` | observable checks that will be true once it is fixed |
 | `origin` | only with a previous run: `missed-earlier` if the problem already existed at the previous commit, otherwise `new` |
-| `verification` | written by the verification pass: `{result, note}`, where `result` is `confirmed`, `downgraded`, or `upgraded` |
+| `verification` | written by the verification pass: `{result, note}`, where `result` is `confirmed`, `downgraded`, or `upgraded`. Required in `<section>.findings.json`; absent in a draft, which `check` accepts for `*.draft.json` |
 
 Rules that keep findings honest:
 
@@ -51,7 +51,7 @@ Rules that keep findings honest:
 - **No evidence, no finding.** If you cannot point to a line, it goes to `unconfirmed` or to a criterion note.
 - **Absence is not a finding by itself.** A missing defense or practice becomes a finding only with a concrete consequence.
 - **Do not inflate.** Severity follows the rubric anchors and the real precondition, not how alarming the category sounds.
-- **Do not repeat across sections.** If another rubric owns the topic, leave it to that section.
+- **Do not repeat across sections.** If another rubric owns the topic, leave it to that section. Where two rubrics touch the same topic, the ownership table in `workflows/repository.md` decides: for example, how third-party code is fetched, pinned, and run belongs to `dependencies`, and `security` keeps a sentence in its `supply` criterion note.
 - **Paths are repository-relative**, with forward slashes, exactly as `git ls-files` prints them.
 - **Never include a secret value.** Describe its kind and location.
 
@@ -75,9 +75,10 @@ One entry per criterion id of the rubric, no more, no fewer.
 
 When `run.json` has `previous`, read the previous `<section>.findings.json` first.
 
-- Same root cause still present: keep the same `key`.
+- Same root cause still present: keep the same `key` and leave `origin` out. Keeping the key is the whole accounting; a `previous` entry with `still-present` is accepted and adds nothing.
+- Same root cause, but part of the earlier claim was wrong: keep the key, correct the claim, and say in `what` or in `checked` what changed in the description.
 - Previous finding no longer present: add `{key, status, note}` to `previous` with `fixed` (you saw the change that fixed it) or `not-reproduced` (you could not find it again and cannot point to a fix).
-- A problem you found now that already existed at the previous commit: set `origin: "missed-earlier"`. Check with `git show <previous-commit>:<path>`.
+- A problem you found now, under a key the previous run did not have: set `origin: "missed-earlier"` if it already existed at the previous commit (check with `git show <previous-commit>:<path>`), otherwise `origin: "new"`. This includes a previous `unconfirmed` item that you can now prove.
 
 Lint fails if a previous finding is neither still present nor explained.
 

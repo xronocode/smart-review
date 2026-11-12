@@ -66,7 +66,7 @@ Each writes `<runDir>/drafts/<section>.draft.json`.
 
 ## Step 5 — Verify
 
-For each draft, launch `agents/verifier.md` (parallel where possible). It re-reads the code,
+For each draft, launch `agents/verifier.md` (parallel where possible; start a section's verifier as soon as its draft exists). It re-reads the code,
 refutes or confirms each finding, merges duplicates, and writes `<runDir>/<section>.findings.json`.
 
 Without subagents, do the verification yourself as a distinct pass after all drafts exist:
@@ -81,6 +81,9 @@ keep it in the section whose rubric owns the topic and replace the other with a 
 relevant criterion note that names the owning finding. `smart-review lint` warns
 (`CROSS-SECTION-DUP`) when two sections start a finding at the same evidence line; treat the
 warning as a prompt to look, since the same line can legitimately matter to two sections.
+Inspectors and verifiers also report suspected product defects that no section owns (a
+correctness bug they passed while reading). List those for the user after the scores, as
+leads that were not verified.
 Pass on to the owning inspector's document anything an inspector or verifier reported as
 belonging to another section, with the same evidence standard.
 
