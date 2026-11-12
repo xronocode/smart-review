@@ -1,4 +1,4 @@
-<GraceChangePlan graceVersion="4.0" status="approved">
+<GraceChangePlan graceVersion="4.0" status="applied">
   <C-AUDIT-SCORING-V3>
     <IntentSummary>Scoring version 3 in the smart-audit CLI: an aggregate limit of 30 points for medium findings, band caps applied to the overall score, updated calculation rendering and scoring documentation, all under node:test coverage, without touching rubrics, agents, schemas, or the review skill.</IntentSummary>
     <BaselineAssertions>
