@@ -18,6 +18,9 @@ const SEV_ORDER = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
 const sorted = (fs) => [...fs].sort((a, b) => SEV_ORDER[a.severity] - SEV_ORDER[b.severity] || a.id.localeCompare(b.id));
 const ev = (e) => `${e.path}:${e.line}${e.endLine ? `-${e.endLine}` : ''}`;
 
+// The overall cap is a calculation step only when it lowers the mean.
+const capBinds = (summary) => Boolean(summary.overallCap) && summary.overallRaw !== null && summary.overallRaw > summary.overallCap.value;
+
 export function buildSummary(run, docs) {
   const sections = {};
   for (const [id, { doc }] of Object.entries(docs)) {
@@ -49,7 +52,7 @@ function calcLines(score, L) {
 
 function overallLines(summary, L) {
   const lines = [`${L.meanOf}: ${summary.overallRaw ?? '—'}`];
-  if (summary.overallCap) lines.push(`${L.capped}: ${L.overallCapReason[summary.overallCap.reason]} ${summary.overallCap.value} → ${summary.overall}`);
+  if (capBinds(summary)) lines.push(`${L.capped}: ${L.overallCapReason[summary.overallCap.reason]} ${summary.overallCap.value} → ${summary.overall}`);
   lines.push(`${L.result}: ${summary.overall ?? '—'}/100`);
   return lines;
 }
@@ -167,7 +170,7 @@ export function renderHtml({ run, docs, rubrics, summary, diff, lang }) {
   const h = [];
   h.push(`<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(L.title)}: ${esc(run.repo.name || '')}</title><style>${CSS}</style></head><body><main>`);
   h.push(`<div class="hero">${ring(summary.overall, summary.band)}<div><h1>${esc(L.title)}: ${esc(run.repo.name || '')}</h1><div class="${summary.band || ''}"><b>${esc(L.overall)}: ${summary.overall ?? '—'}/100 · ${summary.band ? esc(L.band[summary.band]) : '—'}</b></div><div class="meta"><span>${esc(L.commit)} <code>${esc(run.repo.commit.slice(0, 12))}</code></span><span>${esc(L.branch)} <code>${esc(run.repo.branch)}</code></span><span>${esc(L.profile)}: ${esc(run.profile)}</span><span>${esc(run.startedAt.slice(0, 10))}</span></div></div></div>`);
-  h.push(`<table class="calc"><tr><td>${esc(L.meanOf)}</td><td></td><td>${summary.overallRaw ?? '—'}</td></tr>${summary.overallCap ? `<tr><td>${esc(L.capped)}: ${esc(L.overallCapReason[summary.overallCap.reason])} ${summary.overallCap.value}</td><td></td><td>${summary.overall}</td></tr>` : ''}<tr class="total"><td>${esc(L.result)}</td><td></td><td>${summary.overall ?? '—'}/100</td></tr></table>`);
+  h.push(`<table class="calc"><tr><td>${esc(L.meanOf)}</td><td></td><td>${summary.overallRaw ?? '—'}</td></tr>${capBinds(summary) ? `<tr><td>${esc(L.capped)}: ${esc(L.overallCapReason[summary.overallCap.reason])} ${summary.overallCap.value}</td><td></td><td>${summary.overall}</td></tr>` : ''}<tr class="total"><td>${esc(L.result)}</td><td></td><td>${summary.overall ?? '—'}/100</td></tr></table>`);
   if (run.repo.dirty) h.push(`<p class="warn">${esc(L.dirty)}</p>`);
   h.push('<div class="grid">');
   for (const [id, a] of Object.entries(summary.sections)) {

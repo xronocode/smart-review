@@ -10,7 +10,6 @@
 ### Overall score calculation
 
 - Mean of the sections that ran: 67
-- Cap applied: a high finding caps the overall score at 69 → 67
 - Result: 67/100
 
 | Sections | /100 | Findings |

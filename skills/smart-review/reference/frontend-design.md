@@ -1,6 +1,6 @@
 # Frontend Design Skill (Reference)
 
-> Source: https://raw.githubusercontent.com/anthropics/claude-code/main/plugins/frontend-design/skills/frontend-design/SKILL.md
+> Source: https://raw.githubusercontent.com/anthropics/claude-plugins-official/main/plugins/frontend-design/skills/frontend-design/SKILL.md
 > Last fetched: 2026-05-10
 
 ## Design Thinking (Before Coding)
