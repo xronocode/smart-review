@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.0.0 — unreleased
+## v2.0.0 — 2026-11-12
 
 smart-review becomes a plugin made of **sections**. The diff review is now the `changes`
 section; five scored sections review the whole repository at one commit. One skill, one
