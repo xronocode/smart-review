@@ -6,12 +6,12 @@
 // END_MODULE_CONTRACT
 //
 // START_MODULE_MAP
-//   buildSummary - overall score and per-audit scores for a run
+//   buildSummary - overall score (mean of the audits, capped) and per-audit scores for a run
 //   renderMarkdown - Markdown report
 //   renderHtml - self-contained HTML report with light and dark themes
 // END_MODULE_MAP
 import { labels } from './i18n.mjs';
-import { bandOf, WEIGHTS, LOW_TOTAL_MAX } from './score.mjs';
+import { bandOf, WEIGHTS, MEDIUM_TOTAL_MAX, LOW_TOTAL_MAX, overallCap } from './score.mjs';
 import { mean } from './util.mjs';
 
 const SEV_ORDER = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
@@ -26,8 +26,12 @@ export function buildSummary(run, docs) {
     audits[id] = { score: doc.score ? doc.score.value : null, band: doc.score ? doc.score.band : null, rubricVersion: doc.rubricVersion, findings: counts, verdict: doc.verdict };
   }
   const values = Object.values(audits).map((a) => a.score).filter((v) => v !== null);
-  const overall = mean(values);
-  return { commit: run.repo.commit, branch: run.repo.branch, profile: run.profile, scoringVersion: run.scoringVersion, overall, band: overall === null ? null : bandOf(overall), audits };
+  const overallRaw = mean(values);
+  // The overall score inherits the per-audit caps: a counted critical finding in any audit
+  // that ran keeps it at 39, otherwise a counted high finding keeps it at 69.
+  const overallCapValue = overallCap(Object.values(docs).map((d) => d.doc.score));
+  const overall = overallCapValue && overallRaw !== null && overallRaw > overallCapValue.value ? overallCapValue.value : overallRaw;
+  return { commit: run.repo.commit, branch: run.repo.branch, profile: run.profile, scoringVersion: run.scoringVersion, overall, overallRaw, overallCap: overallCapValue, band: overall === null ? null : bandOf(overall), audits };
 }
 
 function criterionTitle(rubric, id, lang) {
@@ -40,6 +44,13 @@ function calcLines(score, L) {
   for (const s of score.steps) lines.push(`${L.severity[s.severity]}: ${s.count} × ${s.weight}${s.limited ? ` (${L.atMost} ${s.limited})` : ''} = −${s.subtotal} → ${s.running}`);
   if (score.cap) lines.push(`${L.capped}: ${L.capReason[score.cap.reason]} ${score.cap.value}`);
   lines.push(`${L.result}: ${score.value}/100`);
+  return lines;
+}
+
+function overallLines(summary, L) {
+  const lines = [`${L.meanOf}: ${summary.overallRaw ?? '—'}`];
+  if (summary.overallCap) lines.push(`${L.capped}: ${L.overallCapReason[summary.overallCap.reason]} ${summary.overallCap.value} → ${summary.overall}`);
+  lines.push(`${L.result}: ${summary.overall ?? '—'}/100`);
   return lines;
 }
 
@@ -56,6 +67,7 @@ export function renderMarkdown({ run, docs, rubrics, summary, diff, lang }) {
   o.push(`# ${L.title}: ${run.repo.name || ''}`.trim(), '');
   o.push(`**${L.overall}: ${summary.overall ?? '—'}/100** (${summary.band ? L.band[summary.band] : '—'})`, '');
   o.push(`- ${L.commit}: \`${run.repo.commit}\``, `- ${L.branch}: \`${run.repo.branch}\``, `- ${L.profile}: ${run.profile}`, `- ${L.date}: ${run.startedAt.slice(0, 10)}`, '');
+  o.push(`### ${L.overallCalc}`, '', ...overallLines(summary, L).map((l) => `- ${l}`), '');
   if (run.repo.dirty) o.push(`> ${L.dirty}`, '');
   o.push(`| ${L.audits} | /100 | ${L.findings} |`, '|---|---|---|');
   for (const [id, a] of Object.entries(summary.audits)) {
@@ -155,6 +167,7 @@ export function renderHtml({ run, docs, rubrics, summary, diff, lang }) {
   const h = [];
   h.push(`<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(L.title)}: ${esc(run.repo.name || '')}</title><style>${CSS}</style></head><body><main>`);
   h.push(`<div class="hero">${ring(summary.overall, summary.band)}<div><h1>${esc(L.title)}: ${esc(run.repo.name || '')}</h1><div class="${summary.band || ''}"><b>${esc(L.overall)}: ${summary.overall ?? '—'}/100 · ${summary.band ? esc(L.band[summary.band]) : '—'}</b></div><div class="meta"><span>${esc(L.commit)} <code>${esc(run.repo.commit.slice(0, 12))}</code></span><span>${esc(L.branch)} <code>${esc(run.repo.branch)}</code></span><span>${esc(L.profile)}: ${esc(run.profile)}</span><span>${esc(run.startedAt.slice(0, 10))}</span></div></div></div>`);
+  h.push(`<table class="calc"><tr><td>${esc(L.meanOf)}</td><td></td><td>${summary.overallRaw ?? '—'}</td></tr>${summary.overallCap ? `<tr><td>${esc(L.capped)}: ${esc(L.overallCapReason[summary.overallCap.reason])} ${summary.overallCap.value}</td><td></td><td>${summary.overall}</td></tr>` : ''}<tr class="total"><td>${esc(L.result)}</td><td></td><td>${summary.overall ?? '—'}/100</td></tr></table>`);
   if (run.repo.dirty) h.push(`<p class="warn">${esc(L.dirty)}</p>`);
   h.push('<div class="grid">');
   for (const [id, a] of Object.entries(summary.audits)) {
@@ -204,6 +217,6 @@ export function renderHtml({ run, docs, rubrics, summary, diff, lang }) {
     h.push('</section>');
   }
   const w = WEIGHTS;
-  h.push(`<footer>${esc(L.footer)} smart-audit ${esc(run.toolVersion)}, scoring v${esc(run.scoringVersion)}: −${w.critical}/−${w.high}/−${w.medium}/−${w.low} ${esc(L.points)}, ${esc(L.lowTotal)} ${LOW_TOTAL_MAX}.</footer></main></body></html>\n`);
+  h.push(`<footer>${esc(L.footer)} smart-audit ${esc(run.toolVersion)}, scoring v${esc(run.scoringVersion)}: −${w.critical}/−${w.high}/−${w.medium}/−${w.low} ${esc(L.points)}, ${esc(L.mediumTotal)} ${MEDIUM_TOTAL_MAX}, ${esc(L.lowTotal)} ${LOW_TOTAL_MAX}.</footer></main></body></html>\n`);
   return h.join('\n');
 }

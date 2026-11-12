@@ -14,10 +14,19 @@ Review modes and agents of smart-review are unchanged.
   audited commit, impact with its precondition, a fix direction, and a way to
   verify the fix. Unconfirmed suspicions are listed separately and not scored.
 - **Deterministic score**: `100 − 40·critical − 15·high − 6·medium − 2·low`,
-  capped at 39 with a critical and 69 with a high finding; low findings
-  together deduct at most 14, so a more thorough audit is not punished for
-  finding more small things. Computed by the CLI,
+  capped at 39 with a critical and 69 with a high finding; medium findings
+  together deduct at most 30 and low findings at most 14, so a more thorough
+  audit is not punished for finding more small things. Computed by the CLI,
   never by the model; the report shows each step.
+- **Scoring version 3**: medium findings together deduct at most 30 points —
+  the medium mirror of the low-findings limit, chosen so medium findings alone
+  can never push a score out of the good band — and the overall score inherits
+  the per-audit caps: a counted critical finding caps the overall score at 39,
+  a counted high finding at 69, so clean audits can no longer average away a
+  serious one. Scores recorded under earlier scoring versions keep their
+  recorded value; scores are comparable only within one scoring version, and
+  the report says so when versions differ. Counting rules (which findings are
+  counted) are unchanged from version 2.
 - **`smart-audit` CLI** (Node 22+, no dependencies, ships inside the skill):
   `start`, `check`, `score`, `lint`, `diff`, `report`, `finish`. `lint` rejects a run on
   schema errors, evidence that does not exist on the commit, a commit or rubric
@@ -30,7 +39,7 @@ Review modes and agents of smart-review are unchanged.
 - **`SMART_AUDIT.md` guidance file and `.smart-audit/accepted.json`**, both
   read from the audited commit and treated as untrusted input.
 - **Claude Code plugin manifest** and `/smart-review:audit` command.
-- **CI**: CLI test job (41 tests); `make validate` now checks both skills.
+- **CI**: CLI test job (46 tests); `make validate` now checks both skills.
 - `package.json` (`smart-audit`, private, not published).
 
 ## v1.2.0 — 2026-10-25
