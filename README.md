@@ -169,11 +169,17 @@ rules, severity anchors, and criteria.
 ```
 score = 100 − 40·critical − 15·high − 6·medium − 2·low      (never below 0)
 any critical → at most 39        any high → at most 69
+medium findings together deduct at most 30
 low findings together deduct at most 14
 ```
 
+The overall score is the mean of the audits that ran under the same caps: a counted
+critical in any audit keeps it at most 39, otherwise a counted high keeps it at most 69.
+
 70–100 good, 40–69 needs work, 0–39 at risk. A repository with a confirmed high-severity
-problem is never "good"; one with a critical problem is always "at risk". Criteria are
+problem is never "good"; one with a critical problem is always "at risk". Medium findings
+alone never leave the good band, so a more thorough audit never scores lower than a
+shallow one. Criteria are
 shown in the report but never enter the score. Rationale:
 [reference/scoring.md](skills/smart-audit/reference/scoring.md).
 
