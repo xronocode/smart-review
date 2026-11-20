@@ -1,4 +1,4 @@
-<GraceChangePlan graceVersion="4.0" status="approved">
+<GraceChangePlan graceVersion="4.0" status="applied">
   <C-REVIEW-CATALOG>
     <IntentSummary>Complete the approved catalogue roadmap in release order and measure first-pass and repeat reviews on pinned projects.</IntentSummary>
     <BaselineAssertions><MustExist><Value>M-SECTION-RUBRICS</Value><Value>M-SECTION-CLI</Value><Value>M-SECTION-SKILL</Value><Value>M-SECTION-PLUGIN</Value></MustExist><MustPassCommand><Command>make validate</Command><Command>make test</Command></MustPassCommand></BaselineAssertions>
