@@ -8,6 +8,8 @@
         <File>tests/cli/rerun.test.mjs</File>
         <File>tests/cli/coverage.test.mjs</File>
         <File>tests/cli/topics.test.mjs</File>
+        <File>tests/cli/external.test.mjs</File>
+        <File>tests/cli/diff-catalog.test.mjs</File>
       </TestFiles>
       <Command>make test</Command>
       <Scenario>The score follows the published weights and caps, ignores info and low-confidence findings, and is idempotent on disk.</Scenario>
@@ -16,6 +18,9 @@
       <Scenario>The HTML report is one file with no scripts or external resources and escapes finding text.</Scenario>
       <Scenario>After a full review a selected topic and section refresh their owners, keep compatible results and publish only on successful verification. Stale or interrupted attempts cannot replace a completed review.</Scenario>
       <Scenario>Unknown and inapplicable sections have explicit coverage and no numeric score; tagging one finding with multiple topics leaves its deduction unchanged.</Scenario>
+      <Scenario>The complete catalogue routes internal choices to unique owners. An external-only attempt publishes an unscored status with or without supplied metadata, and a mixed attempt keeps that status separate from inspected findings.</Scenario>
+      <Scenario>When a past section relied on mutable external evidence, its result is excluded from a selective repeat until the section is inspected again.</Scenario>
+      <Scenario>A reinspection can consult its latest original even after an intervening exclusion. Comparing previously unreviewed sections or incompatible rubric versions does not invent a score delta. Commit-bound evidence reads never fetch missing blobs.</Scenario>
       <TraceAssertion>node:test reports zero failing tests for tests/cli/*.test.mjs.</TraceAssertion>
     </V-M-SECTION-CLI>
     <V-M-SECTION-SKILL>
@@ -36,7 +41,7 @@
       <Command>make validate</Command>
       <Scenario>Each rubric's prose headings list exactly the criterion ids of its criteria list, in the same order, with the same version and question.</Scenario>
       <Scenario>Profiles quick and full exist and name only shipped rubrics.</Scenario>
-      <TraceAssertion>make validate prints "rubrics OK" with five rubric ids.</TraceAssertion>
+      <TraceAssertion>make validate prints "rubrics OK" including delivery, integrations, database, frontend and open-source, and checks that rubric titles, criteria and profiles agree.</TraceAssertion>
     </V-M-SECTION-RUBRICS>
     <V-M-SECTION-PLUGIN>
       <TestFiles>

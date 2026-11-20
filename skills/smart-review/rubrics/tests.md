@@ -1,6 +1,6 @@
 ---
 id: tests
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Test section
@@ -13,15 +13,15 @@ Would this test suite catch a real regression before release, and can someone el
 
 In scope: test code, fixtures, runner configuration, coverage configuration, documented test commands, and the CI steps that run tests.
 
-Out of scope: branch protection and release gating (not part of this version); production code quality except where it makes code untestable; rewriting tests.
+The delivery section reviews branch protection and release gates. Here, inspect production code where it determines what a test can observe. Leave test fixes to the maintainer.
 
 ## Method
 
 1. **Map the test surface.** From recon: test roots, runners, commands, which product surfaces have tests and which have none.
 2. **Sample by risk, not by file order.** Read the tests around the code where a bug would hurt most (data integrity, security controls, money, state machines, parsers), then a sample of ordinary tests. Say how many test files you read out of how many exist.
-3. **Walk the main user-visible features.** Risk-first sampling misses ordinary features whose tests look fine. Take the features the README or the recon surfaces present as the product's core (at least five: for an editor, things like creating a table, typing a heading, saving, searching; for a service, its main endpoints). For each, find the UI action or entry point in the code, then find the test that would fail if that entry point were disconnected or called with wrong arguments. A feature whose only tests mount the component, stub the action, or assert on the stub is unprotected, however many tests mention it.
+3. **Walk the main user-visible features.** Identify core features from the README and registered entry points. Trace at least five when present, or all of them when fewer exist. Include ordinary flows alongside high-risk ones. For each, trace the public action to the test assertion that would detect a disconnected handler or wrong argument. Mounting a component or asserting only on a stub can leave the real action unprotected. In `checked[].note`, record the number traced out of the number identified, name the features sampled, and cite the entry points and assertions or gaps. If there are no user-visible flows, record 0 of 0 and the basis for marking `journeys` inapplicable.
 4. **Check each assertion you cite against the code under test.** Ask of each suspicious test: what change to the product would make it fail? If none would, it is decorative. A test named as a regression test for a cleanup, an unmount, or an error path deserves this question in particular.
-5. **Optional bounded run.** You may run the documented test command once if the user allowed commands, it needs no secrets, no network services, and no undeclared setup, and it is expected to finish within ten minutes. Never retry until green, never install anything that the lockfile does not declare. If you do not run it, say so in limits; a documented command is then "discoverable", not "passing".
+5. **Read existing results.** Never execute the reviewed project's code, including tests, collection, hooks, builds or coverage commands. A committed or supplied CI report may establish what ran. Record its producer, immutable artifact reference or path, tested commit, date or run ID, suite or job, and outcome. Match the revision and scope to the claim. A report from a different revision supplies historical context only.
 
 ## Evidence rules
 
@@ -30,6 +30,7 @@ Out of scope: branch protection and release gating (not part of this version); p
 - A test that always passes, asserts only that a mock was called with what the test itself passed in, or asserts on a constant, is evidence for `assertions`.
 - Skipped, focused (`.only`), or commented-out tests are evidence with their line.
 - Do not report missing tests for generated, vendored, or trivially declarative code.
+- Source can establish that a test is wired to a behavior, checks a meaningful outcome, and has a documented invocation. Use `unknown` for execution-dependent judgments without attributable results. A green badge, configured timeout or unrelated passing job gives no evidence about this suite's results, coverage or elapsed time.
 
 ## Severity anchors
 
@@ -68,13 +69,13 @@ Empty, maximal, unicode, concurrent, and off-by-one cases where they matter.
 Sequences, undo and redo, retries, races, lifecycle. `na` when the product is stateless.
 
 ### `determinism` — Deterministic and environment-independent
-No dependence on wall-clock time, random seeds, test order, network, or a developer's machine. Retries configured in the runner are evidence of flakiness, not a fix.
+Trace uncontrolled time, randomness, ordering, network or machine state to the assertion it affects. Configured retries warrant inspection. Claim observed flakiness only when attributable results show inconsistent outcomes under comparable conditions.
 
 ### `runnable` — Suite runs from a documented command
-The README or contributor guide gives one command per suite, and CI uses the same commands.
+Trace the documented command to runner configuration and the CI job that selects the suite. Describe which invocation and prerequisites are discoverable. Claim a passing run only for a matching existing result and name the tested environment.
 
 ### `coverage` — Coverage is measured and meaningful
-A threshold exists, is enforced, and excludes are justified. `unknown` when no coverage evidence is in the repository.
+Inspect configured thresholds, the CI step that enforces them, and justified exclusions. Quote measured coverage only for the files, metric and revision identified by an existing report. Use `unknown` if neither measurement nor configuration is available.
 
 ### `data` — Fixtures and test data are explicit and isolated
 Tests create what they need and clean up; no shared mutable fixtures.
@@ -83,14 +84,14 @@ Tests create what they need and clean up; no shared mutable fixtures.
 It is clear which tests prove real integration and which prove behavior against fakes.
 
 ### `speed` — Feedback time is acceptable
-Evidence from CI configuration or timings in the repository. `unknown` if there is none; do not guess.
+Use attributable existing timings for the relevant suite and environment. A CI timeout is an upper limit on a job. Use `unknown` when actual elapsed time is unavailable.
 
 ### `maintainability` — Test code is maintainable
 Helpers, naming, and structure let a newcomer add a test without copying a page of setup.
 
 ## Optional tools
 
-None required. Coverage reports already committed or produced by the bounded run may be cited.
+None required. Inspect existing result artifacts as data.
 
 ## Common false positives
 

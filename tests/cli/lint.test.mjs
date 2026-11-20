@@ -1,13 +1,29 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { cpSync, rmSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { git } from '../../skills/smart-review/cli/lib/util.mjs';
 import { main } from '../../skills/smart-review/cli/smart-review.mjs';
 import { lintRun, checkFile, findSecrets } from '../../skills/smart-review/cli/lib/lint.mjs';
 import { finding, findingsDoc, makeRepo, write, read, commitAll } from './helpers.mjs';
 
 let fx;
 const quiet = () => {};
+
+test('evidence reads leave missing blobs offline in a partial clone', t => {
+  const { repo, commit, cleanup } = makeRepo();
+  t.after(cleanup);
+  const partial = join(repo, 'partial.git');
+  execFileSync('git', ['-C', repo, 'config', 'uploadpack.allowFilter', 'true']);
+  execFileSync('git', ['clone', '--bare', '--quiet', '--filter=blob:none', pathToFileURL(repo).href, partial]);
+  const objectId = git(repo, ['rev-parse', commit + ':README.md']);
+  const missing = () => git(partial, ['rev-list', '--objects', '--missing=print', '--all']).split('\n');
+  assert.ok(missing().includes('?' + objectId));
+  assert.equal(git(partial, ['show', commit + ':README.md']), null);
+  assert.ok(missing().includes('?' + objectId), 'the read must not materialize the promised blob');
+});
 
 // A valid two-section run in a throwaway repository; each test mutates a copy.
 before(() => {

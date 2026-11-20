@@ -145,7 +145,8 @@ test('a scoring version difference marks runs not comparable and the report says
 test('the CLI runs as a standalone executable', () => {
   const out = execFileSync(process.execPath, [CLI, 'rubrics', '--json'], { encoding: 'utf8' });
   const data = JSON.parse(out);
-  assert.deepEqual(data.profiles.full, ['security', 'tests', 'dependencies', 'ai-readiness', 'hygiene']);
+  assert.deepEqual(data.profiles.full.toSorted(), data.sections.map(section => section.id).sort());
+  assert.deepEqual(data.profiles.quick, ['security', 'tests', 'dependencies']);
   assert.deepEqual(data.weights, { critical: 40, high: 15, medium: 6, low: 2, info: 0 });
   assert.equal(main(['nonsense', 'x'], quiet), 2);
 });

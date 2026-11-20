@@ -1,6 +1,6 @@
 ---
 id: dependencies
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Dependency section
@@ -13,7 +13,7 @@ Can this project's dependencies be installed reproducibly and trusted, and which
 
 In scope: manifests, lockfiles, vendored code, git and URL dependencies, package-manager configuration, install and build scripts, CI steps that install or download tools, update automation.
 
-Out of scope: reading the source of third-party packages; changing versions; running installs; querying online advisory databases except through a scanner that is already installed.
+Inspect pinned manifests and lockfiles as data. Version and advisory comparisons may use a dated release catalogue, advisory snapshot or existing audit report. A live advisory lookup requires explicit user permission and an already installed, trusted scanner that reads the pinned inputs without executing project code. Installs, builds and dependency changes are outside this review.
 
 ## Method
 
@@ -28,7 +28,8 @@ Out of scope: reading the source of third-party packages; changing versions; run
 
 - Cite the manifest or lockfile line, or the script line that fetches code.
 - Give counts where you state them (packages per lockfile) and say how you counted.
-- A known vulnerability is a finding only with a named advisory from a scanner run or a committed report, and only when the vulnerable package is reachable in a runtime or build path. Without a scanner, mark `vulnerabilities` as `unknown` and add a limit. Never assert an advisory from memory.
+- When a comparison actually uses mutable release, support or advisory data from outside the commit, set `checked[].asOf` on its observation to the source snapshot date (`YYYY-MM-DD`) or `"unknown"` if undated. This marks the section for fresh inspection on a selective repeat. Omit the field for commit-only observations and skipped lookups. In the same entry's `note`, identify the publisher, URL or artifact path, and snapshot revision, digest or identifier. For scanner results also record the tool/version, run date, input revision or lockfile digest, and ecosystems covered. A scan date alone cannot date the advisory database. Every finding still needs evidence lines on the reviewed commit.
+- State which packages and ecosystems the snapshot covers and any gaps. Compare snapshots on repeat runs. If a package is unchanged and a new advisory or release appeared in the reference data, identify the changed evidence. Without a suitable reference, record the affected comparison as `unknown` with a limit. Use `na` when the source inventory establishes there are no relevant third-party dependencies.
 - One unpinned pattern repeated in many scripts is one finding with several evidence lines.
 
 ## Severity anchors
@@ -47,7 +48,7 @@ All sources of third-party code are discoverable from the repository. 5: every s
 Lockfiles exist for every ecosystem and the documented and CI commands honor them.
 
 ### `vulnerabilities` — State of known vulnerabilities
-Based only on scanner output or committed audit reports. `unknown` otherwise.
+Match the advisory ID, ecosystem, package identity and affected range to the resolved version on this commit. Trace the package into a runtime or build path and check the advisory's platform, feature and usage conditions. Cite both the resolution and the consumer or build step. An entry for a different platform, a patched backport, or an optional dependency excluded from the build can refute a version-only hit. A clean scan describes only its inputs and snapshot date. If reachability or the match is unresolved, keep the lead unconfirmed.
 
 ### `separation` — Runtime, build, and test dependencies are separated
 Production installs do not pull development tooling; the split matches actual use.
@@ -59,7 +60,7 @@ No execution of code that bypasses the lockfile; registries and sources are expl
 Lifecycle scripts are known and limited; CI uses `--ignore-scripts` or an allow-list where practical.
 
 ### `freshness` — Dependencies are maintained and reasonably current
-Judge from lockfile versions and committed evidence only. No guessing about latest versions. `unknown` if you cannot tell.
+Compare the pinned version with a release or support snapshot for the same ecosystem, package, channel and supported major line. Cite the release, support date or maintenance policy alongside the locked version and project compatibility constraints. Explain the cost of lag, such as depending on a line past the publisher's support date. A newer prerelease or major version alone establishes no maintenance gap. A lockfile gives a resolved version but cannot establish the latest release. When one upgrade addresses a known advisory, keep one finding under `vulnerabilities` and reference its key here if relevant.
 
 ### `footprint` — No unused or duplicated dependencies
 Packages declared but never imported; several libraries for one job; multiple major versions of one package without reason.
@@ -72,11 +73,10 @@ Update automation or a documented cadence exists and covers every ecosystem pres
 
 ## Optional tools
 
-Use only if already installed; record each as `used`, `absent`, or `skipped`.
+Use only trusted, already installed tools that read pinned inputs without loading target plugins, configuration code or install hooks. Record each as `used`, `absent`, or `skipped`. Obtain explicit permission before any online advisory lookup.
 
-- `osv-scanner --lockfile <file>` or `osv-scanner -r .` (needs network; skip if the user did not allow it).
-- `npm audit --json`, `cargo audit`, `pip-audit` only against existing lockfiles, never with a fix flag.
-- `knip` or `depcheck` for unused packages if already a project dependency.
+- Use `osv-scanner`, `npm audit`, `cargo audit` or `pip-audit` only in a read-only mode that inspects the existing resolution. Skip modes that install, resolve new versions or apply fixes.
+- Existing `knip` or `depcheck` reports can supply leads about unused packages. Confirm each against imports, commands, registration and build configuration.
 
 ## Common false positives
 

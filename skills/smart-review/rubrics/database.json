@@ -1,0 +1,43 @@
+{
+  "id": "database",
+  "version": "1.0.0",
+  "title": {
+    "en": "Database query efficiency",
+    "ru": "Эффективность запросов к базе данных"
+  },
+  "question": {
+    "en": "How does database work grow on the application's own data paths, and which costs can the available evidence establish?",
+    "ru": "Как растёт нагрузка на базу данных в операциях самого приложения и какие затраты подтверждают имеющиеся данные?"
+  },
+  "scale": 5,
+  "criteria": [
+    {
+      "id": "result-bounds",
+      "title": {
+        "en": "Selection and pagination bound the work requested",
+        "ru": "Отбор и постраничная выборка ограничивают объём работы"
+      }
+    },
+    {
+      "id": "round-trips",
+      "title": {
+        "en": "Database trips scale with the intended batch",
+        "ru": "Число обращений к базе соответствует размеру обрабатываемых пакетов"
+      }
+    },
+    {
+      "id": "access-path",
+      "title": {
+        "en": "Predicates and ordering fit the declared access paths",
+        "ru": "Условия отбора и сортировка согласованы со способами доступа к данным"
+      }
+    },
+    {
+      "id": "observed-cost",
+      "title": {
+        "en": "Query cost is established for a stated workload",
+        "ru": "Затраты на запрос подтверждены для указанной нагрузки"
+      }
+    }
+  ]
+}

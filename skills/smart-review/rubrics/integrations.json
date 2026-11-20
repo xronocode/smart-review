@@ -1,0 +1,50 @@
+{
+  "id": "integrations",
+  "version": "1.0.0",
+  "title": {
+    "en": "External integration reliability",
+    "ru": "Надёжность внешних интеграций"
+  },
+  "question": {
+    "en": "When an external service is slow, unavailable or only partly successful, what happens to the operation and how does it recover?",
+    "ru": "Что происходит с операцией при задержке, недоступности или частичном успехе внешнего сервиса и как завершить её после сбоя?"
+  },
+  "scale": 5,
+  "criteria": [
+    {
+      "id": "provider-outcomes",
+      "title": {
+        "en": "Provider outcomes reach the correct caller state",
+        "ru": "Результат вызова внешнего сервиса корректно отражается в состоянии операции"
+      }
+    },
+    {
+      "id": "attempt-budget",
+      "title": {
+        "en": "Waiting and repeated attempts are bounded",
+        "ru": "Время ожидания и число повторных попыток ограничены"
+      }
+    },
+    {
+      "id": "replay-safety",
+      "title": {
+        "en": "Repeated writes preserve the intended effect",
+        "ru": "Повторная отправка команды сохраняет ожидаемый результат"
+      }
+    },
+    {
+      "id": "partial-completion",
+      "title": {
+        "en": "Partial and out-of-order outcomes preserve progress",
+        "ru": "Частичные результаты и ответы не по порядку сохраняют достигнутый прогресс"
+      }
+    },
+    {
+      "id": "provider-recovery",
+      "title": {
+        "en": "Unfinished work can be located and reconciled",
+        "ru": "Незавершённые операции можно найти и сверить с данными внешнего сервиса"
+      }
+    }
+  ]
+}

@@ -18,12 +18,13 @@ finding that reaches the report is true, correctly rated, and stated once.
 
 `rubrics/<section>.md` (severity anchors, evidence rules, common false positives),
 `rubrics/<section>.json`, `reference/findings-contract.md`, `reference/untrusted-input.md`,
-`<runDir>/run.json`. If `run.json` has `previous`, also the previous `<section>.findings.json`
+`<runDir>/run.json`. If the previous run includes this section, also read its `<section>.findings.json`
 (`<runDir>/../../<previous.dir>/`).
 
 ## Rules
 
 - Read-only. The only file you write is `<runDir>/<section>.findings.json`.
+- Verify against pinned Git blobs. Never run target programs, tests or workflows, query live services or open external assessment references.
 - Re-read the code yourself. Do not accept the inspector's description as evidence.
 - Try to **refute** each finding: look for the caller that validates, the configuration that disables the path, the test that pins the control, the reference that makes "unused" code used.
 - Do not add new findings unless you trip over a clear one while checking; if you do, give it the same level of evidence.
@@ -71,6 +72,13 @@ full attention to findings that are new or changed in this pass.
 
 - Check that `criteria` covers every id in `rubrics/<section>.json` exactly once, including
   for a section selected by topic. Each note must agree with the findings you kept.
+- For an absent surface, confirm the bounded search against recon and the committed tree.
+  Keep `na` when the surface demonstrably does not apply and `unknown` when evidence is
+  insufficient. Verify those notes even on an empty draft. With no assessed criteria,
+  the CLI publishes the coverage and reason without a numeric score.
+- For an observation relying on mutable issuer data, verify the source and snapshot in
+  `checked[].note` and its date in `checked[].asOf` (`YYYY-MM-DD`, or `"unknown"` when
+  undated). A prior external web assessment is historical metadata, separate from findings.
 - Check `previous` accounting when a previous run exists: every previous key is still present or explained; verify one `fixed` claim per previous finding by looking at the code.
 - Rewrite `verdict` and `summary` if your changes made them wrong.
 - Make sure `limits` is honest and non-empty.

@@ -1,8 +1,9 @@
 # Findings contract
 
-Every section produces one JSON document, `<section>.findings.json`, that must validate against
+Each freshly reviewed source section produces one JSON document, `<section>.findings.json`, that must validate against
 `schemas/findings.schema.json` and pass `smart-review lint`. This file explains what each part
-must contain. The schema says what is *allowed*; this says what is *good*.
+must contain. The `web-pentest` choice records external assessment metadata separately.
+It has no findings document, criterion, finding tag or deduction.
 
 ## Document fields
 
@@ -19,7 +20,7 @@ must contain. The schema says what is *allowed*; this says what is *good*.
 | `unconfirmed` | suspicions you could not confirm; never scored |
 | `criteria` | exactly one entry per rubric criterion |
 | `strengths` | controls and practices worth keeping, each a concrete sentence |
-| `checked` | what you actually traced, as `{area, note}` |
+| `checked` | what you actually traced, as `{area, note}` plus `asOf` for mutable external evidence |
 | `limits` | what you did not run or read, as `{text, effect}` |
 | `tools` | every optional tool named by the rubric, as `used`, `absent`, or `skipped`; `[]` when the rubric names none |
 | `previous` | accounting for the previous run's findings (only when a previous run exists) |
@@ -33,7 +34,7 @@ A finding is a confirmed, independent problem with evidence on the reviewed comm
 |---|---|
 | `id` | `F-001`, `F-002`, … in order of severity |
 | `key` | stable kebab-case name of the *root cause*, e.g. `preview-renders-active-html`. It identifies the finding across runs: reuse the previous run's key when the root cause is the same, and do not put line numbers or counts in it |
-| `topics` | optional array of distinct IDs from `secrets`, `authn`, `dead-code`, `vulnerabilities`, and `freshness`. Omit when none applies. Older documents may omit the field. |
+| `topics` | optional array of distinct IDs from `secrets`, `authn`, `api-access`, `dead-code`, `configuration`, `unification`, `complexity`, `cognitive-debt`, `frontend-server`, `frontend-components`, `vulnerabilities`, and `freshness`. Omit when none applies. Older documents may omit the field. |
 | `title` | what is wrong, in plain words, without severity words |
 | `severity` | `critical`, `high`, `medium`, `low`, or `info`, using the rubric's anchors |
 | `confidence` | `high`: you read the whole path. `medium`: the path is clear but one link is inferred. `low`: plausible but unproven — prefer `unconfirmed` |
@@ -70,17 +71,38 @@ One entry per criterion id of the rubric, no more, no fewer.
 `note` is one or two sentences of repository-specific evidence. A section needs at least
 one assessed criterion for a numeric score. The CLI uses the findings to calculate
 deductions. When all criteria are `na`, the section is inapplicable. When applicable
-criteria exist and all are `unknown`, the section has insufficient data.
+criteria exist and all are `unknown`, the section has insufficient data. Both outcomes
+have no numeric score and contribute nothing to the mean. Record the scope of the search
+for an absent surface in `checked` and the effect of missing evidence in `limits`.
 
 ## Checked and limits
 
 `checked` lists what you traced, concretely enough that a reader could repeat it ("read all 7 workflow files", "traced 12 IPC commands from registration to handler"). Give counts.
 
+For any observation that depends on mutable issuer data outside the commit, set
+`checked[].asOf` to the source snapshot date (`YYYY-MM-DD`) or `"unknown"` if undated.
+In `note`, identify the issuer and the snapshot, export or record actually examined.
+Examples include effective branch protection from a hosting-provider export, package
+versions from a registry snapshot, and vulnerability matches from an advisory dataset.
+A committed workflow or lockfile alone only establishes what the commit declared.
+
+```json
+{"area": "Release gates", "note": "GitHub ruleset export R17 lists the integration check as required on main.", "asOf": "2026-11-12"}
+```
+
+A later selective run excludes a section with this evidence as stale (`external-data`)
+until that section is inspected again, even at the same commit. Older findings with
+commit-only observations need no `asOf`. A supplied web assessment is historical,
+unscored metadata with its own date and provenance in the run record. It never becomes
+a source observation or a finding.
+
 `limits` lists what bounds the conclusion. Each has `text` (what was not done) and `effect` (what the reader therefore cannot conclude). At least one limit always exists: a static read is never complete.
 
 ## Previous run
 
-When `run.json` has `previous`, read the previous `<section>.findings.json` first.
+Read the previous `<section>.findings.json` if that section was reviewed. A missing
+section in an older report was unreviewed. Preserve the recorded versions, findings and
+scores when presenting historical reports. Compare scores only across compatible versions.
 
 - Same root cause still present: keep the same `key` and leave `origin` out. Keeping the key is the whole accounting; a `previous` entry with `still-present` is accepted and adds nothing.
 - Same root cause, but part of the earlier claim was wrong: keep the key, correct the claim, and say in `what` or in `checked` what changed in the description.

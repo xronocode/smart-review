@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.2.0 — 2026-11-20
+
+- List the 22 review choices with `smart-review catalog`. Labels are available in English and Russian. Select scored sections and topics together to inspect each owner once.
+- Review delivery, integration reliability, database queries, frontend code and open-source readiness using dedicated rubrics. The full profile considers all ten sections. Reviewers explain absent surfaces and evidence gaps. The quick profile keeps its three sections.
+- Select public API access, configuration hygiene, cognitive debt, implementation consistency, complexity concentration, frontend communication or frontend components by topic.
+- Record the scope and date of a supplied web assessment separately from source findings. This entry has no numerical score. The skill reads repository source and supplied records offline.
+- Selective reruns exclude results that relied on mutable external evidence. A reinspection can still consult the last original findings. History identifies first inspections and changes of finding owner, and suppresses score deltas across incompatible rubric versions.
+
 ## v2.1.0 — 2026-11-20
 
 - Select secrets, authentication, dead code, dependency vulnerabilities and freshness by topic. The plan names the whole sections that will run.

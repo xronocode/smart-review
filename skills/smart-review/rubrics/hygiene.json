@@ -1,6 +1,6 @@
 {
   "id": "hygiene",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "title": {
     "en": "Codebase hygiene",
     "ru": "Гигиена кодовой базы"
@@ -107,6 +107,27 @@
       "title": {
         "en": "Errors are handled, not swallowed",
         "ru": "Ошибки обрабатываются, а не проглатываются"
+      }
+    },
+    {
+      "id": "configuration",
+      "title": {
+        "en": "Configuration has predictable sources and precedence",
+        "ru": "Источники настроек и порядок их применения предсказуемы"
+      }
+    },
+    {
+      "id": "unification",
+      "title": {
+        "en": "Equivalent operations follow the same contract",
+        "ru": "Равнозначные операции следуют одному контракту"
+      }
+    },
+    {
+      "id": "complexity",
+      "title": {
+        "en": "Concentrated control flow can be changed safely",
+        "ru": "Код со сложным ветвлением можно безопасно менять"
       }
     }
   ]

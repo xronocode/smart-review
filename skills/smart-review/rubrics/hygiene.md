@@ -1,6 +1,6 @@
 ---
 id: hygiene
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Codebase hygiene section
@@ -11,21 +11,21 @@ How much avoidable friction does this codebase carry for the next person or agen
 
 ## Scope
 
-In scope: tracked files as a whole (what is committed that should not be, what is missing), build and maintenance commands, onboarding documentation, structure, naming, leftovers, formatting and lint configuration, local duplication, module cohesion, and error handling patterns.
+In scope: tracked files, build and maintenance commands, onboarding, structure, naming, leftovers, formatting and lint configuration, setting resolution, local duplication, parallel implementations, module cohesion, control flow, and error handling.
 
 Out of scope: security impact (security rubric), test quality (test rubric), dependency choice (dependency rubric), architecture redesign, personal style preferences, anything in generated or vendored directories.
 
 ## Method
 
-1. **Survey tracked files.** Use `git ls-files` on the reviewed commit: sizes, binary and build output, backup copies, environment files, generated directories that are tracked.
+1. **Survey tracked files.** Use `git ls-tree -r -l <commit>` to inventory sizes, binary and build output, backup copies, environment files and tracked generated directories.
 2. **Check the working surface.** Commands in the manifest, Makefile, or scripts directory; README steps; formatter and linter configuration and whether a command runs them.
 3. **Sample code by size and churn.** Read the largest and most central source files and a sample of ordinary ones. Look for dead code, duplicated logic, mixed responsibilities, swallowed errors, magic values.
 4. **Follow failure paths of operations that matter.** A search for empty catch blocks finds the obvious cases only. Pick the operations that persist user state (settings, permissions, recent files, bookmarks) or change the user's content (paste, drop, import, replace), and read what happens when each fails: is the error reported to anyone, and is a half-applied change rolled back? An ignored result (`let _ =`, a promise without a catch, a callback that drops its error) on such a path, or a failure that leaves the content changed, is evidence for `errors`.
-5. **Confirm each lead.** Before reporting code as unused, search for references including dynamic ones (string lookups, registries, reflection, configuration). Before reporting duplication, confirm the copies really do the same job.
+5. **Confirm each lead.** Trace candidate leftovers from the project's entry points, including registrations and external consumers. For repeated logic, identify the behavior the callers rely on. For configuration, follow a setting through precedence and validation to its consumer.
 
 ## Evidence rules
 
-- Every finding cites lines. For "unused", also state what you searched for and that nothing references it.
+- Every finding cites lines. For unused code, name the candidate, the supported entry points and the searches used to rule out callers.
 - Group by root cause: fifteen files with the same leftover pattern are one finding with representative evidence and a count.
 - State the cost in concrete terms: what a contributor has to know, check, or redo because of it.
 - Do not report formatting differences line by line; report the missing or unenforced formatter once.
@@ -40,7 +40,7 @@ Out of scope: security impact (security rubric), test quality (test rubric), dep
 ## Criteria
 
 ### `dead-code` — Unused, disabled, and unreachable code
-Unreferenced modules and exports, commented-out blocks, permanently false flags, remnants of removed features.
+Check candidates against package exports, CLI manifests, build targets, framework conventions, plugin discovery, registries, reflection, templates, configuration and cross-language callers as applicable. Cite the declaration and evidence that the last supported path was removed or cannot reach it. A callback loaded by name or a public library export with no internal caller can be live. If an external consumer or registration remains unresolved, record the uncertainty. Use `na` for a repository with no maintained code.
 
 ### `artifacts` — Tracked binaries and build output
 Build results, caches, archives, and large binaries that are tracked without a stated reason.
@@ -81,9 +81,22 @@ Very large files or modules mixing unrelated concerns; long positional parameter
 ### `errors` — Errors are handled, not swallowed
 Empty catch blocks, ignored results, broad catches that hide the cause, missing cleanup or rollback on failure. Score from the failure paths you followed in step 4, not from a pattern search alone.
 
+### `configuration` — Configuration has predictable sources and precedence
+Where a runtime, build or deployment setting is consumed, trace its declaration, default, overrides, precedence and validation to the value used. Cite the lines at which two consumers resolve the same setting differently, an advertised override is ignored, or an invalid value silently changes behavior. State the affected mode and consequence. An intentional per-environment override with documented precedence is a valid configuration. Use `na` if there are no such settings and `unknown` if effective resolution is delegated to unavailable tooling. Keep machine-specific paths under `env` and unnamed literals under `constants` unless the defect is in how a setting is resolved.
+
+### `unification` — Equivalent operations follow the same contract
+Identify entry points that promise the same behavior, such as a CLI and a batch importer using the same normalization rule. Cite the shared contract and both call paths. If they diverge, name the condition that changes the result or the policy update that requires independent edits. A shared implementation can satisfy the contract at both entry points. Respect intentional differences between API versions, platform adapters and compatibility paths.
+
+Use `na` when there are no comparable operations and `unknown` when the intended equivalence cannot be established. Local repeated logic belongs to `duplication`. Keep a single `unification` finding when drift between separate implementations is the cost.
+
+### `complexity` — Concentrated control flow can be changed safely
+Use the size and churn sample to locate concentrations of branching, mutable state or side effects. Trace a maintained operation in the strongest candidate. Cite where a branch sets state and where another relies on it, or where several exits independently restore the same invariant. Describe a realistic change and the paths a maintainer must reason about together. A large declarative dispatch table with independent entries can be straightforward to change.
+
+Use `na` for a purely declarative surface and `unknown` when the relevant behavior cannot be traced. Keep unrelated responsibilities under `cohesion`, and a concrete failure to clean up under `errors`. Cite the same finding key if one fix addresses both.
+
 ## Optional tools
 
-Use only if already installed or already a project dependency: `knip`, `ts-prune`, `vulture`, `cargo udeps`, the project's own lint command. Record each as `used`, `absent`, or `skipped`. Tool output is a lead; confirm before reporting.
+Use already installed, trusted static analyzers such as `knip`, `ts-prune`, `vulture` or `cargo udeps` only in modes that read the pinned files without building, writing to the target or loading its code or plugins. Otherwise use an existing report with its tool, revision and scope. Record each tool as `used`, `absent` or `skipped`, and confirm candidates against source. Read the project's own lint command as text.
 
 ## Common false positives
 

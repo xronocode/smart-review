@@ -10,7 +10,7 @@
 //   renderMarkdown - Markdown report
 //   renderHtml - self-contained HTML report with light and dark themes
 // END_MODULE_MAP
-import { labels } from './i18n.mjs';
+import { diffScoreLabel, diffStatusLabel, labels } from './i18n.mjs';
 import { bandOf, criterionCoverage, WEIGHTS, MEDIUM_TOTAL_MAX, LOW_TOTAL_MAX, overallCap } from './score.mjs';
 import { mean } from './util.mjs';
 
@@ -21,7 +21,7 @@ const ev = (e) => `${e.path}:${e.line}${e.endLine ? `-${e.endLine}` : ''}`;
 // The overall cap is a calculation step only when it lowers the mean.
 const capBinds = (summary) => Boolean(summary.overallCap) && summary.overallRaw !== null && summary.overallRaw > summary.overallCap.value;
 
-export function buildSummary(run, docs) {
+export function buildSummary(run, docs, lang = run.lang) {
   const sections = {};
   for (const [id, { doc }] of Object.entries(docs)) {
     const counts = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
@@ -41,7 +41,7 @@ export function buildSummary(run, docs) {
   }
   const results = Object.values(sections);
   const values = results.map((a) => a.score).filter((v) => v !== null);
-  const coverage = results.every((a) => a.coverage) ? {
+  const coverage = results.length && results.every((a) => a.coverage) ? {
     assessed: results.reduce((sum, a) => sum + a.coverage.assessed, 0),
     applicable: results.reduce((sum, a) => sum + a.coverage.applicable, 0),
   } : null;
@@ -52,13 +52,16 @@ export function buildSummary(run, docs) {
   const overallCapValue = legacyMean ? null : overallCap(Object.values(docs).map((d) => d.doc.score));
   const overall = overallCapValue && overallRaw !== null && overallRaw > overallCapValue.value ? overallCapValue.value : overallRaw;
   const allNA = results.length > 0 && results.every((a) => a.status === 'not-applicable');
-  const overallStatus = overall !== null ? 'scored' : allNA ? 'not-applicable' : 'insufficient-data';
+  const externalOnly = run.externalAssessments && run.reviewSections?.length === 0 && !results.length;
+  const overallStatus = externalOnly ? 'external-only' : overall !== null ? 'scored' : allNA ? 'not-applicable' : 'insufficient-data';
   const carried = run.carried ?? {};
   return {
     commit: run.repo.commit, branch: run.repo.branch, profile: run.profile, scoringVersion: run.scoringVersion,
     overall, overallRaw, overallCap: overallCapValue, band: bandOf(overall), overallStatus, coverage,
     topics: run.topics ?? [], reviewed: Object.keys(sections).filter((id) => !Object.hasOwn(carried, id)),
     carried, stale: run.stale ?? {}, sections,
+    ...(run.externalAssessments && { externalAssessments: Object.fromEntries(Object.entries(run.externalAssessments).map(([id, entry]) =>
+      [id, { ...entry, statusLabel: labels(lang).externalStatus[entry.status] }])) }),
   };
 }
 
@@ -68,6 +71,16 @@ function scoreLabel(value, status, L) {
 
 function coverageRatio(coverage) {
   return coverage ? `${coverage.assessed}/${coverage.applicable}` : '—';
+}
+
+function hasDiffDetails(section) {
+  // Older saved diffs omit previouslyUnreviewed and can have an empty item list.
+  return section && (section.items.length || (section.previouslyUnreviewed !== undefined && !section.comparable));
+}
+
+function checkedDate(item, L) {
+  if (!item.asOf) return '';
+  return ` (${L.asOf}: ${item.asOf === 'unknown' ? L.unknownDate : item.asOf})`;
 }
 
 function reviewDetails(summary, L) {
@@ -82,6 +95,17 @@ function reviewDetails(summary, L) {
   }
   if (summary.coverage) lines.push(`${L.coverage}: ${coverageRatio(summary.coverage)}`);
   return lines;
+}
+
+function externalRows(id, entry, summary, L) {
+  const rows = [];
+  for (const field of ['assessmentDate', 'scope', 'deploymentId', 'reference']) {
+    if (entry.metadata?.[field]) rows.push([L.externalFields[field], entry.metadata[field]]);
+  }
+  for (const doc of entry.metadata?.documents || []) rows.push([L.externalFields.documents, doc]);
+  rows.push([L.externalFields.recordedAtCommit, entry.recordedAtCommit]);
+  rows.push([summary.topics.includes(id) ? L.externalFields.sourceAttempt : L.carried, entry.sourceAttempt]);
+  return rows;
 }
 
 function meanLabel(summary, L) {
@@ -125,13 +149,20 @@ export function renderMarkdown({ run, docs, rubrics, summary, diff, lang }) {
   const L = labels(lang);
   const name = (id) => L.sectionNames[id] || id;
   const o = [];
-  o.push(`# ${L.title}: ${run.repo.name || ''}`.trim(), '');
+  o.push(`# ${L.title}: ${markdownText(run.repo.name || '')}`.trim(), '');
   o.push(`**${L.overall}: ${scoreLabel(summary.overall, summary.overallStatus, L)}**${summary.band ? ` (${L.band[summary.band]})` : ''}`, '');
-  o.push(`- ${L.commit}: \`${run.repo.commit}\``, `- ${L.branch}: \`${run.repo.branch}\``, `- ${L.profile}: ${run.profile}`, `- ${L.date}: ${run.startedAt.slice(0, 10)}`,
+  o.push(`- ${L.commit}: \`${run.repo.commit}\``, `- ${L.branch}: ${codeSpan(run.repo.branch)}`, `- ${L.profile}: ${markdownText(run.profile)}`, `- ${L.date}: ${markdownText(run.startedAt.slice(0, 10))}`,
     ...reviewDetails(summary, L).map((line) => `- ${markdownText(line)}`), '');
-  o.push(`### ${L.overallCalc}`, '', ...overallLines(summary, L).map((l) => `- ${l}`), '');
+  const externalOnly = summary.overallStatus === 'external-only';
+  if (!externalOnly) o.push(`### ${L.overallCalc}`, '', ...overallLines(summary, L).map((l) => `- ${l}`), '');
   if (run.repo.dirty) o.push(`> ${L.dirty}`, '');
-  o.push(`| ${L.sections} | /100 | ${L.coverage} | ${L.findings} |`, '|---|---|---|---|');
+  for (const [id, entry] of Object.entries(summary.externalAssessments || {})) {
+    o.push(`## ${L.externalTitle}`, '', L.externalStatus[entry.status], '');
+    // An indented code block keeps even GFM bare URLs, backticks, and HTML literal.
+    for (const [label, value] of externalRows(id, entry, summary, L)) o.push(`    ${label}: ${value}`);
+    o.push('');
+  }
+  if (!externalOnly) o.push(`| ${L.sections} | /100 | ${L.coverage} | ${L.findings} |`, '|---|---|---|---|');
   for (const [id, a] of Object.entries(summary.sections)) {
     const c = a.findings;
     const parts = ['critical', 'high', 'medium', 'low', 'info'].filter((s) => c[s]).map((s) => `${c[s]} ${L.severity[s].toLowerCase()}`);
@@ -169,22 +200,29 @@ export function renderMarkdown({ run, docs, rubrics, summary, diff, lang }) {
       o.push('');
     }
     const d = diff && diff.sections[id];
-    if (d && d.items.length) {
-      o.push(`### ${L.changes}`, '', `${d.scoreBefore ?? '—'} → ${d.scoreAfter ?? '—'} (${L.prevCommit} \`${diff.previousCommit.slice(0, 12)}\`)`, '');
-      if (!d.comparable) o.push(`> ${L.notComparable}`, '');
-      for (const it of d.items) o.push(`- **${L.status[it.status]}:** ${it.title}${it.note ? ` — ${it.note}` : ''}`);
+    if (hasDiffDetails(d)) {
+      o.push(`### ${L.changes}`, '', `${diffScoreLabel(d, L)} (${L.prevCommit} \`${diff.previousCommit.slice(0, 12)}\`)`, '');
+      for (const it of d.items) o.push(`- **${markdownText(diffStatusLabel(it, L.status[it.status]))}:** ${it.title}${it.note ? ` — ${it.note}` : ''}`);
       o.push('');
     }
-    o.push(`### ${L.checked}`, '', ...doc.checked.map((c) => `- **${c.area}.** ${c.note}`), '');
+    o.push(`### ${L.checked}`, '', ...doc.checked.map((c) => `- **${c.area}.** ${c.note}${markdownText(checkedDate(c, L))}`), '');
     o.push(`### ${L.limits}`, '', ...doc.limits.map((l) => `- ${l.text} — *${L.effect}:* ${l.effect}`), '');
     if (doc.tools.length) o.push(`### ${L.tools}`, '', ...doc.tools.map((t) => `- ${t.name}${t.version ? ` ${t.version}` : ''}: ${L.toolStatus[t.status]}${t.note ? ` — ${t.note}` : ''}`), '');
   }
-  o.push('---', '', `${L.footer} smart-review ${run.toolVersion}, scoring v${run.scoringVersion}.`, '');
+  if (!externalOnly) o.push('---', '', `${L.footer} smart-review ${run.toolVersion}, scoring v${run.scoringVersion}.`, '');
   return o.join('\n');
 }
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const markdownText = (s) => esc(s).replace(/([\\`*_[\]|])/g, '\\$1').replace(/[\r\n]+/g, ' ');
+
+function codeSpan(text) {
+  const value = String(text).replace(/[\r\n]+/g, ' ');
+  const ticks = value.match(/`+/g) || [];
+  if (!ticks.length) return '`' + value + '`';
+  const delimiter = '`'.repeat(Math.max(...ticks.map(run => run.length)) + 1);
+  return `${delimiter} ${value} ${delimiter}`;
+}
 
 function ring(value, band, size = 120) {
   if (value == null) return '';
@@ -229,17 +267,24 @@ export function renderHtml({ run, docs, rubrics, summary, diff, lang }) {
   const L = labels(lang);
   const name = (id) => L.sectionNames[id] || id;
   const h = [];
-  h.push(`<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(L.title)}: ${esc(run.repo.name || '')}</title><style>${CSS}</style></head><body><main>`);
+  h.push(`<!doctype html><html lang="${esc(lang)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(L.title)}: ${esc(run.repo.name || '')}</title><style>${CSS}</style></head><body><main>`);
   const overallLabel = scoreLabel(summary.overall, summary.overallStatus, L);
   h.push(`<div class="hero">${ring(summary.overall, summary.band)}<div><h1>${esc(L.title)}: ${esc(run.repo.name || '')}</h1><div class="${summary.band || ''}"><b>${esc(L.overall)}: ${esc(overallLabel)}${summary.band ? ` · ${esc(L.band[summary.band])}` : ''}</b></div><div class="meta"><span>${esc(L.commit)} <code>${esc(run.repo.commit.slice(0, 12))}</code></span><span>${esc(L.branch)} <code>${esc(run.repo.branch)}</code></span><span>${esc(L.profile)}: ${esc(run.profile)}</span><span>${esc(run.startedAt.slice(0, 10))}</span></div></div></div>`);
   const details = reviewDetails(summary, L);
   if (details.length) h.push(`<ul>${details.map((line) => `<li>${esc(line)}</li>`).join('')}</ul>`);
-  if (summary.overall === null) {
+  const externalOnly = summary.overallStatus === 'external-only';
+  if (summary.overall === null && !externalOnly) {
     h.push(...overallLines(summary, L).map((line) => `<p>${esc(line)}</p>`));
-  } else {
+  } else if (summary.overall !== null) {
     h.push(`<table class="calc"><tr><td>${esc(meanLabel(summary, L))}</td><td></td><td>${summary.overallRaw}</td></tr>${capBinds(summary) ? `<tr><td>${esc(L.capped)}: ${esc(L.overallCapReason[summary.overallCap.reason])} ${summary.overallCap.value}</td><td></td><td>${summary.overall}</td></tr>` : ''}<tr class="total"><td>${esc(L.result)}</td><td></td><td>${esc(overallLabel)}</td></tr></table>`);
   }
   if (run.repo.dirty) h.push(`<p class="warn">${esc(L.dirty)}</p>`);
+  for (const [id, entry] of Object.entries(summary.externalAssessments || {})) {
+    h.push(`<section class="sec"><h2>${esc(L.externalTitle)}</h2><p>${esc(L.externalStatus[entry.status])}</p><dl>`);
+    for (const [label, value] of externalRows(id, entry, summary, L)) h.push(`<dt>${esc(label)}</dt><dd>${esc(value)}</dd>`);
+    h.push('</dl></section>');
+  }
+  if (externalOnly) return [...h, '</main></body></html>\n'].join('\n');
   h.push('<div class="grid">');
   for (const [id, a] of Object.entries(summary.sections)) {
     const n = Object.values(a.findings).reduce((x, y) => x + y, 0);
@@ -270,11 +315,9 @@ export function renderHtml({ run, docs, rubrics, summary, diff, lang }) {
     }
     if (sc?.notCounted.length) h.push(`<p class="note">${esc(L.notCounted)}: ${sc.notCounted.map((n) => `${esc(n.id)} (${esc(L.reason[n.reason])})`).join(', ')}</p>`);
     const d = diff && diff.sections[id];
-    if (d && d.items.length) {
-      const delta = d.delta === null ? '' : ` (${d.delta > 0 ? '+' : ''}${d.delta})`;
-      h.push(`<h3>${esc(L.changes)}</h3><p><b>${d.scoreBefore ?? '—'} → ${d.scoreAfter ?? '—'}${delta}</b> <span class="note">${esc(L.prevCommit)} <code>${esc(diff.previousCommit.slice(0, 12))}</code></span></p>`);
-      if (!d.comparable) h.push(`<p class="warn">${esc(L.notComparable)}</p>`);
-      h.push(`<table>${d.items.map((it) => `<tr><td style="white-space:nowrap">${esc(L.status[it.status])}</td><td>${esc(it.title)}${it.note ? `<br><span class="note">${esc(it.note)}</span>` : ''}</td></tr>`).join('')}</table>`);
+    if (hasDiffDetails(d)) {
+      h.push(`<h3>${esc(L.changes)}</h3><p><b>${esc(diffScoreLabel(d, L, true))}</b> <span class="note">${esc(L.prevCommit)} <code>${esc(diff.previousCommit.slice(0, 12))}</code></span></p>`);
+      if (d.items.length) h.push(`<table>${d.items.map((it) => `<tr><td style="white-space:nowrap">${esc(diffStatusLabel(it, L.status[it.status]))}</td><td>${esc(it.title)}${it.note ? `<br><span class="note">${esc(it.note)}</span>` : ''}</td></tr>`).join('')}</table>`);
     }
     h.push(`<h3>${esc(L.criteria)}</h3><p class="note">${esc(L.criteriaNote)}</p><table>`);
     for (const c of doc.criteria) {
@@ -283,7 +326,7 @@ export function renderHtml({ run, docs, rubrics, summary, diff, lang }) {
     }
     h.push('</table>');
     if (doc.strengths.length) h.push(`<h3>${esc(L.strengths)}</h3><ul>${doc.strengths.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>`);
-    h.push(`<h3>${esc(L.checked)}</h3><ul>${doc.checked.map((c) => `<li><b>${esc(c.area)}.</b> ${esc(c.note)}</li>`).join('')}</ul>`);
+    h.push(`<h3>${esc(L.checked)}</h3><ul>${doc.checked.map((c) => `<li><b>${esc(c.area)}.</b> ${esc(c.note)}${esc(checkedDate(c, L))}</li>`).join('')}</ul>`);
     h.push(`<h3>${esc(L.limits)}</h3><ul>${doc.limits.map((l) => `<li>${esc(l.text)}<br><span class="note">${esc(L.effect)}: ${esc(l.effect)}</span></li>`).join('')}</ul>`);
     if (doc.tools.length) h.push(`<h3>${esc(L.tools)}</h3><ul>${doc.tools.map((t) => `<li><code>${esc(t.name)}</code>${t.version ? ` ${esc(t.version)}` : ''}: ${esc(L.toolStatus[t.status])}${t.note ? ` — ${esc(t.note)}` : ''}</li>`).join('')}</ul>`);
     h.push('</section>');
