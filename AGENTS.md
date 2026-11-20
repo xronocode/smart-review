@@ -4,7 +4,7 @@
 code review, repository review, review sections, agent skills, Claude Code plugin, findings schema, deterministic scoring, lint, evidence verification, npx
 
 ## Annotation
-smart-review is an agent-agnostic review skill organised in sections and shipped as a Claude Code plugin. The `changes` section answers "what is wrong with this change"; the scored sections (security, tests, dependencies, AI readiness, hygiene) answer "what state is this repository in at this commit" and produce evidence-backed findings, a deterministic 0-100 score per section, and a machine-verified report. It installs with `npx skills add xronocode/smart-review` into any agent; the skill name stays `smart-review` so that existing installs upgrade in place.
+smart-review is an agent-agnostic review skill shipped as a Claude Code plugin. The `changes` section reviews a diff. Repository reviews inspect selected sections at one commit and produce verified findings, criterion coverage and a deterministic score wherever evidence supports one. Use `smart-review catalog --json` to list section, topic and external assessment choices. Install with `npx skills add xronocode/smart-review`.
 
 ## GRACE 4 Source of Truth
 

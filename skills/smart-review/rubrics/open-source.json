@@ -1,0 +1,50 @@
+{
+  "id": "open-source",
+  "version": "1.0.0",
+  "title": {
+    "en": "Open-source readiness",
+    "ru": "Готовность проекта к открытому распространению"
+  },
+  "question": {
+    "en": "Can an outside adopter identify what they may use, get a usable distribution and follow the project's stated path for contributions?",
+    "ru": "Может ли внешний пользователь определить условия использования, получить рабочую версию проекта и внести вклад по описанным правилам?"
+  },
+  "scale": 5,
+  "criteria": [
+    {
+      "id": "project-terms",
+      "title": {
+        "en": "Project terms and notices follow the distribution",
+        "ru": "Условия использования и уведомления доступны в поставке"
+      }
+    },
+    {
+      "id": "distribution",
+      "title": {
+        "en": "The advertised distribution contains its entry point",
+        "ru": "Заявленная поставка содержит нужную точку входа"
+      }
+    },
+    {
+      "id": "external-first-use",
+      "title": {
+        "en": "An outside user can complete the first documented task",
+        "ru": "Внешний пользователь может выполнить первую задачу по инструкции"
+      }
+    },
+    {
+      "id": "contribution-path",
+      "title": {
+        "en": "An accepted contribution can reach review",
+        "ru": "Предусмотренный проектом вклад можно передать на рассмотрение"
+      }
+    },
+    {
+      "id": "maintainer-contact",
+      "title": {
+        "en": "Outside users can identify the right maintainer channel",
+        "ru": "Внешний пользователь может найти подходящий канал связи с сопровождающими"
+      }
+    }
+  ]
+}

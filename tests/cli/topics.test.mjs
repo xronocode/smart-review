@@ -25,6 +25,9 @@ test('selectable topic IDs are criteria in their owner rubrics and match the fin
   assert.deepEqual(TOPICS, {
     secrets: 'security', authn: 'security', 'dead-code': 'hygiene',
     vulnerabilities: 'dependencies', freshness: 'dependencies',
+    'api-access': 'security', configuration: 'hygiene', unification: 'hygiene',
+    complexity: 'hygiene', 'cognitive-debt': 'ai-readiness',
+    'frontend-server': 'frontend', 'frontend-components': 'frontend',
   });
   for (const [topic, owner] of Object.entries(TOPICS)) {
     assert.ok(rubric(owner).criteria.some(c => c.id === topic), `${owner}/${topic}`);
@@ -33,6 +36,52 @@ test('selectable topic IDs are criteria in their owner rubrics and match the fin
   const topics = schema.$defs.finding.properties.topics;
   assert.deepEqual(topics.items.enum.toSorted(), Object.keys(TOPICS).sort());
   assert.equal(topics.uniqueItems, true);
+});
+
+test('a mixed engineering review routes each topic exactly once to its owner', t => {
+  const { repo } = fixture(t);
+  const topics = ['api-access', 'configuration', 'cognitive-debt', 'unification', 'complexity', 'frontend-server', 'frontend-components'];
+  const lines = [];
+  assert.equal(main(['start', '--repo', repo, '--topics', topics.join(','), '--sections', 'delivery,integrations,database,open-source,frontend'], line => lines.push(line)), 0, lines.join('\n'));
+  const { reviewSections, sections, topics: selected } = JSON.parse(lines.join('\n'));
+  assert.deepEqual(selected, topics);
+  assert.deepEqual(reviewSections.toSorted(), ['ai-readiness', 'database', 'delivery', 'frontend', 'hygiene', 'integrations', 'open-source', 'security']);
+  assert.deepEqual(sections, reviewSections);
+});
+
+test('all 22 choices publish one report with distinct owners and unscored external work', t => {
+  const { repo } = fixture(t);
+  const invoke = args => {
+    const output = [];
+    assert.equal(main(args, line => output.push(line)), 0, output.join('\n'));
+    return JSON.parse(output.join('\n'));
+  };
+  const catalog = invoke(['catalog', '--json']);
+  assert.equal(new Set(catalog.map(item => item.id)).size, 22);
+  assert.equal(catalog.length, 22);
+  assert.ok(catalog.every(item => item.title.ru && item.title.en));
+  assert.deepEqual(catalog.filter(item => item.kind === 'external').map(item => [item.id, item.owner]), [['web-pentest', null]]);
+  const ids = kind => catalog.filter(item => item.kind === kind).map(item => item.id);
+  const run = invoke(['start', '--repo', repo, '--sections', ids('section').join(','), '--topics', [...ids('topic'), ...ids('external')].join(',')]);
+  const owners = [...new Set(catalog.map(item => item.owner).filter(Boolean))].sort();
+  assert.deepEqual(run.reviewSections.toSorted(), owners);
+  assert.deepEqual(Object.keys(run.rubrics).sort(), owners);
+  assert.deepEqual(invoke(['rubrics', '--json']).catalog, catalog);
+  for (const owner of owners) {
+    const doc = findingsDoc(owner, run.repo.commit, []);
+    if (owner === 'database' || owner === 'frontend') {
+      doc.criteria = doc.criteria.map(({ id }) => ({ id, status: 'na', note: 'The fixture contains only a standalone module.' }));
+    }
+    write(join(run.runDir, owner + '.findings.json'), doc);
+  }
+  const lines = [];
+  assert.equal(main(['finish', run.runDir, '--repo', repo], line => lines.push(line)), 0, lines.join('\n'));
+  const summary = read(join(run.runDir, 'summary.json'));
+  assert.deepEqual(Object.keys(summary.sections).sort(), owners);
+  assert.equal(summary.sections.database.score, null);
+  assert.equal(summary.sections.frontend.status, 'not-applicable');
+  assert.equal(summary.externalAssessments['web-pentest'].status, 'external-assessment-required');
+  assert.equal(read(join(repo, '.smart-review/index.json')).runs.length, 1);
 });
 
 test('draft check, findings check, and run lint agree on optional cross-section topic tags', t => {
@@ -112,7 +161,7 @@ test('a mixed rerun carries byte-identical findings from the original commit and
   assert.deepEqual(attempt.topics, ['secrets', 'authn']);
   assert.deepEqual(attempt.reviewSections.toSorted(), ['security', 'tests']);
   assert.deepEqual(attempt.sections.toSorted(), first.run.sections.toSorted());
-  assert.deepEqual(Object.keys(attempt.carried).sort(), ['ai-readiness', 'dependencies', 'hygiene']);
+  assert.deepEqual(Object.keys(attempt.carried).sort(), first.run.sections.filter(id => !['security', 'tests'].includes(id)).sort());
   const lint = () => lintRun({ runDir, repo }).errors;
   assert.deepEqual(lint(), []);
 

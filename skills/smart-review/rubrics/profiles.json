@@ -9,6 +9,11 @@
     "tests",
     "dependencies",
     "ai-readiness",
-    "hygiene"
+    "hygiene",
+    "delivery",
+    "integrations",
+    "database",
+    "frontend",
+    "open-source"
   ]
 }

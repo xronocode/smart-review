@@ -14,18 +14,20 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { CliError, TOOL_VERSION, parseArgs, readJson, writeJson, skillRoot } from './lib/util.mjs';
 import { computeScore, SCORING_VERSION, WEIGHTS, CAPS, MEDIUM_TOTAL_MAX, LOW_TOTAL_MAX } from './lib/score.mjs';
-import { lintRun, checkFile, RULES } from './lib/lint.mjs';
+import { lintRun, checkFile, checkRunMetadata, readExternalAssessment, RULES } from './lib/lint.mjs';
 import { diffRuns } from './lib/diff.mjs';
-import { startRun, loadRun } from './lib/run.mjs';
-import { loadRubric, loadProfiles, listRubrics, TOPICS } from './lib/rubrics.mjs';
+import { startRun, loadRun, WEB_ASSESSMENT_TOPIC } from './lib/run.mjs';
+import { loadRubric, loadProfiles, listRubrics, reviewCatalog, TOPICS } from './lib/rubrics.mjs';
 import { buildSummary, renderMarkdown, renderHtml } from './lib/report.mjs';
-import { labels } from './lib/i18n.mjs';
+import { diffScoreLabel, diffStatusLabel, labels } from './lib/i18n.mjs';
 
 const HELP = `smart-review ${TOOL_VERSION} — deterministic scoring and verification for repository reviews
 
 Usage:
   smart-review start  --repo <path> [--profile quick|full | --sections a,b | --topics a,b] [--out <dir>] [--lang en|ru] [--name <repo-name>]
                       --sections and --topics may be combined; topic owners are reviewed in full
+                      --topics web-pentest accepts optional --external-assessment <local.json>
+                      JSON fields: assessmentDate (YYYY-MM-DD), scope, optional deploymentId, reference, documents (names)
   smart-review score  <run-dir | findings.json>
   smart-review check  <recon.json | draft.json | findings.json> --repo <path>   check one document while working
   smart-review lint   <run-dir> --repo <path> [--json]
@@ -33,6 +35,7 @@ Usage:
   smart-review report <run-dir> [--lang en|ru]
   smart-review finish <run-dir> --repo <path> [--lang en|ru]   score + lint, then diff + report when lint passes
   smart-review rubrics [--json]                                list sections, profiles, and scoring constants
+  smart-review catalog [--lang en|ru] [--json]                 list review choices and their routes
   smart-review rules                                           list lint rules
 
 Exit codes: 0 ok, 1 lint errors, 2 usage or input error.`;
@@ -59,6 +62,7 @@ function scoreTarget(target, out) {
     if (run.scoringVersion !== SCORING_VERSION) throw new CliError('this attempt uses an older scoring version; start a new review');
     accepted = run.accepted || [];
     for (const [id, entry] of Object.entries(docs)) {
+      if (run.externalAssessments && !run.sections.includes(id)) continue;
       if (!Object.hasOwn(run.carried || {}, id)) files.push(entry.path);
     }
   } else {
@@ -66,6 +70,7 @@ function scoreTarget(target, out) {
     const runPath = join(dirname(abs), 'run.json');
     if (existsSync(runPath)) {
       const run = readJson(runPath);
+      if (run.externalAssessments && run.reviewSections?.length === 0) throw new CliError('an external-only attempt has no findings to score');
       if (run.scoringVersion !== SCORING_VERSION) throw new CliError('this attempt uses an older scoring version; start a new review');
       accepted = run.accepted || [];
     }
@@ -74,6 +79,7 @@ function scoreTarget(target, out) {
   for (const f of files) {
     const doc = readJson(f);
     if (!Array.isArray(doc.findings) || typeof doc.section !== 'string') throw new CliError(`${f} is not a findings document`);
+    if (doc.section === WEB_ASSESSMENT_TOPIC) throw new CliError('web-pentest is an unscored external assessment');
     delete doc.score;
     doc.score = computeScore(doc, accepted);
     writeJson(f, doc);
@@ -101,11 +107,18 @@ function doDiff(runDir, flags) {
 
 function doReport(runDir, flags) {
   const { dir, run, docs } = loadRun(runDir);
-  if (!Object.keys(docs).length) throw new CliError(`${dir} has no findings documents`);
+  const docIds = Object.keys(docs);
+  if (!Array.isArray(run.sections) || docIds.length !== run.sections.length ||
+      docIds.some(id => !run.sections.includes(id) || docs[id].doc?.section !== id)) {
+    throw new CliError('findings documents must match the declared source sections before reporting');
+  }
+  if (run.externalAssessments || run.topics?.includes(WEB_ASSESSMENT_TOPIC) || !docIds.length || run.reviewSections?.length === 0) {
+    checkRunMetadata({ dir, run }, (rule, message) => { throw new CliError(`${rule}: ${message}`); });
+  }
   const lang = flags.lang && flags.lang !== true ? flags.lang : run.lang || 'en';
-  const rubrics = Object.fromEntries(Object.keys(docs).map((id) => [id, loadRubric(id)]));
+  const rubrics = Object.fromEntries(docIds.map((id) => [id, loadRubric(id)]));
   const diff = existsSync(join(dir, 'diff.json')) ? readJson(join(dir, 'diff.json')) : null;
-  const summary = buildSummary(run, docs);
+  const summary = buildSummary(run, docs, lang);
   const ctx = { run, docs, rubrics, summary, diff, lang };
   writeJson(join(dir, 'summary.json'), summary);
   writeFileSync(join(dir, 'report.md'), renderMarkdown(ctx));
@@ -115,6 +128,7 @@ function doReport(runDir, flags) {
 
 function printReport(dir, summary, lang, out) {
   out(`overall: ${summary.overall === null ? labels(lang).scoreStatus[summary.overallStatus] : `${summary.overall}/100`}`);
+  for (const [id, entry] of Object.entries(summary.externalAssessments || {})) out(`${id}: ${entry.statusLabel}`);
   out(join(dir, 'report.md'));
   out(join(dir, 'report.html'));
 }
@@ -134,6 +148,7 @@ function publish(dir, run, summary) {
     index.runs.push({
       commit: run.repo.commit, dir: attempt, date: run.startedAt, overall: summary.overall,
       sections: Object.fromEntries(Object.entries(summary.sections).map(([id, section]) => [id, section.score])),
+      ...(summary.externalAssessments && { externalAssessments: Object.fromEntries(Object.entries(summary.externalAssessments).map(([id, entry]) => [id, entry.status])) }),
     });
     if (!existsSync(slot)) {
       const candidate = mkdtempSync(join(publications, 'pending-'));
@@ -190,6 +205,16 @@ export function main(argv, out = console.log) {
       for (const [k, v] of Object.entries(RULES)) out(`${k.padEnd(22)} ${v}`);
       return 0;
     }
+    if (flags.lang !== undefined && !['en', 'ru'].includes(flags.lang)) throw new CliError('--lang requires en or ru');
+    if (flags['external-assessment'] !== undefined && cmd !== 'start') throw new CliError('--external-assessment is a start option');
+    if (cmd === 'catalog') {
+      const catalog = reviewCatalog();
+      if (flags.json) out(JSON.stringify(catalog, null, 2));
+      else for (const { id, title, kind, owner } of catalog) {
+        out(`${id.padEnd(22)} ${title[flags.lang || 'en']}  (${labels(flags.lang).route[kind]}${owner ? ` → ${owner}` : ''})`);
+      }
+      return 0;
+    }
     if (cmd === 'rubrics') {
       const data = {
         skillRoot,
@@ -200,6 +225,8 @@ export function main(argv, out = console.log) {
         lowTotalMax: LOW_TOTAL_MAX,
         profiles: loadProfiles(),
         topics: TOPICS,
+        externalTopics: [WEB_ASSESSMENT_TOPIC],
+        catalog: reviewCatalog(),
         sections: listRubrics().map((id) => {
           const r = loadRubric(id);
           return { id, version: r.version, question: r.question.en, criteria: r.criteria.length };
@@ -210,6 +237,7 @@ export function main(argv, out = console.log) {
         for (const a of data.sections) out(`${a.id.padEnd(14)} v${a.version}  ${a.criteria} criteria  ${a.question}`);
         for (const [p, ids] of Object.entries(data.profiles)) out(`profile ${p}: ${ids.join(', ')}`);
         for (const [topic, section] of Object.entries(TOPICS)) out(`topic ${topic}: ${section}`);
+        out(`external topic ${WEB_ASSESSMENT_TOPIC}`);
       }
       return 0;
     }
@@ -217,7 +245,12 @@ export function main(argv, out = console.log) {
       const sections = selection(flags, 'sections');
       const topics = selection(flags, 'topics');
       if (flags.profile && (topics || sections)) throw new CliError('choose a profile or an explicit selection');
-      const res = startRun({ repo: need(flags, 'repo'), out: flags.out === true ? undefined : flags.out, profile: flags.profile === undefined ? undefined : need(flags, 'profile'), sections, topics, lang: flags.lang === 'ru' ? 'ru' : 'en', name: flags.name === true ? undefined : flags.name });
+      let externalAssessment;
+      if ('external-assessment' in flags) {
+        if (!topics?.includes(WEB_ASSESSMENT_TOPIC)) throw new CliError('--external-assessment requires --topics web-pentest');
+        externalAssessment = readExternalAssessment(need(flags, 'external-assessment'));
+      }
+      const res = startRun({ repo: need(flags, 'repo'), out: flags.out === true ? undefined : flags.out, profile: flags.profile === undefined ? undefined : need(flags, 'profile'), sections, topics, externalAssessment, lang: flags.lang === 'ru' ? 'ru' : 'en', name: flags.name === true ? undefined : flags.name });
       out(JSON.stringify({ runDir: res.runDir, priorPass: res.prior, ...res.run }, null, 2));
       return 0;
     }
@@ -244,7 +277,17 @@ export function main(argv, out = console.log) {
     if (cmd === 'diff') {
       const d = doDiff(target, flags);
       if (!d) out('no previous run to compare with');
-      else for (const [id, a] of Object.entries(d.sections)) out(`${id}: ${a.scoreBefore ?? '—'} → ${a.scoreAfter ?? '—'}; ${a.items.map((i) => i.status).join(', ') || 'no findings'}`);
+      else {
+        const lang = flags.lang || readJson(join(target, 'run.json')).lang;
+        const L = labels(lang);
+        for (const [id, section] of Object.entries(d.sections)) {
+          const statuses = section.items.filter(item => item.status !== 'observed')
+            .map(item => diffStatusLabel(item, lang === 'ru' ? L.status[item.status] : item.status));
+          if (!statuses.length && !section.previouslyUnreviewed) statuses.push(lang === 'ru' ? L.noFindings : 'no findings');
+          const details = statuses.join(', ');
+          out(`${id}: ${diffScoreLabel(section, L)}${details ? '; ' + details : ''}`);
+        }
+      }
       return 0;
     }
     if (cmd === 'report') {

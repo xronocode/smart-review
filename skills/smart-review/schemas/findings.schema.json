@@ -44,7 +44,7 @@
         "topics": {
           "type": "array",
           "uniqueItems": true,
-          "items": { "type": "string", "enum": ["secrets", "authn", "dead-code", "vulnerabilities", "freshness"] }
+          "items": { "type": "string", "enum": ["secrets", "authn", "api-access", "dead-code", "configuration", "unification", "complexity", "cognitive-debt", "frontend-server", "frontend-components", "vulnerabilities", "freshness"] }
         },
         "title": { "type": "string", "minLength": 1 },
         "severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "info"] },
@@ -94,7 +94,8 @@
       "required": ["area", "note"],
       "properties": {
         "area": { "type": "string", "minLength": 1 },
-        "note": { "type": "string", "minLength": 1 }
+        "note": { "type": "string", "minLength": 1 },
+        "asOf": { "type": "string", "pattern": "^(unknown|[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01]))$" }
       }
     },
     "limit": {

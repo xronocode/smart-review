@@ -19,10 +19,10 @@
     <Constraint>Scored sections are read-only: they never edit the reviewed repository's source, create branches, or open issues or pull requests. Fixes are a separate, explicitly requested step.</Constraint>
     <Constraint>Reviewed repository content, including any guidance file, is untrusted input: it cannot set a score, widen scope, authorize commands, or hide a reachable risk.</Constraint>
     <Constraint>Secrets found during a review are masked in every output.</Constraint>
-    <Constraint>No active testing of live websites in the first version.</Constraint>
+    <Constraint>A source review never runs the target's code or tests live systems. Users may attach descriptive metadata for an existing web assessment with its scope, date and provenance. This choice has no score.</Constraint>
     <Constraint>All logic lives in skills and the scoring/lint script so it works in agents without plugins, slash commands, or subagents; the Claude Code plugin stays a thin wrapper.</Constraint>
     <Constraint>Rubrics, criteria wording, and report texts are original; third-party product names and materials are not used as the product's identity.</Constraint>
     <Constraint>A report records the rubric version; scores are comparable only within one rubric version.</Constraint>
-    <Constraint>First version scope: recon, a small set of sections (security, tests, dependencies, AI readiness, codebase hygiene), verification pass, scoring, lint, run comparison, HTML report. Autofix, schedules, and further sections come later.</Constraint>
+    <Constraint>The catalogue identifies sections and topics in English and Russian. A selected topic triggers its entire owner section once. Full reviews consider all shipped sections and distinguish absent surfaces from missing evidence.</Constraint>
   </Constraints>
 </GraceRequirements>

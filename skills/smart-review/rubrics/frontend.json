@@ -1,0 +1,29 @@
+{
+  "id": "frontend",
+  "version": "1.0.0",
+  "title": {
+    "en": "Frontend",
+    "ru": "Фронтенд"
+  },
+  "question": {
+    "en": "Does the interface show what the service actually did, and do its components preserve the shared interaction contract?",
+    "ru": "Отражает ли интерфейс фактический результат операции на сервере и сохраняют ли компоненты единые правила взаимодействия?"
+  },
+  "scale": 5,
+  "criteria": [
+    {
+      "id": "frontend-server",
+      "title": {
+        "en": "UI state follows the service contract",
+        "ru": "Состояние интерфейса соответствует контракту сервиса"
+      }
+    },
+    {
+      "id": "frontend-components",
+      "title": {
+        "en": "Components preserve shared behavior and design-system rules",
+        "ru": "Компоненты сохраняют общее поведение и соблюдают правила дизайн-системы"
+      }
+    }
+  ]
+}
