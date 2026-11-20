@@ -1,7 +1,7 @@
 <GraceGraphDocument graceVersion="4.0">
   <GD-MAIN>
     <M-SECTION-CLI>
-      <Summary>Dependency-free Node CLI of smart-review: opens a run pinned to a commit, checks single documents, computes scores, lints a run, compares it with the previous run, and renders Markdown and HTML reports.</Summary>
+      <Summary>Dependency-free Node CLI for commit-bound review attempts, topic selection, coverage-aware scoring, lint, comparison and publication of reports with same-commit section provenance.</Summary>
       <Path>skills/smart-review/cli/smart-review.mjs</Path>
       <Path>skills/smart-review/cli/lib/util.mjs</Path>
       <Path>skills/smart-review/cli/lib/validate.mjs</Path>

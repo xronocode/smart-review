@@ -11,17 +11,19 @@
 //   findSecrets - secret-shaped substrings in a text
 //   RULES - rule identifiers and their one-line meaning
 // END_MODULE_MAP
-import { existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
+import { join, relative, resolve } from 'node:path';
 import { commitExists, git, isSafeRelPath, lineCountAtCommit, readJson, skillRoot } from './util.mjs';
 import { validate } from './validate.mjs';
 import { computeScore } from './score.mjs';
-import { loadRubric } from './rubrics.mjs';
-import { loadRun } from './run.mjs';
+import { loadRubric, TOPICS } from './rubrics.mjs';
+import { loadRun, validAttemptPath } from './run.mjs';
 
 export const RULES = {
   SCHEMA: 'document does not match its JSON Schema',
   'RUN-COMMIT': 'run commit does not exist in the reviewed repository',
+  'RUN-SCOPE': 'reviewed, carried, stale, or requested topics disagree with the run scope',
+  'CARRIED-SOURCE': 'carried findings differ from their original reviewed attempt or its metadata',
   'SECTION-MISSING': 'a section listed in run.json has no findings document',
   'SECTION-UNKNOWN': 'findings document for a section that is not in run.json or has no rubric',
   'COMMIT-MISMATCH': 'findings commit differs from the run commit',
@@ -83,6 +85,87 @@ function checkEvidence(list, where, repo, commit, add) {
   }
 }
 
+function validateFindings(doc, schema) {
+  const violations = validate(doc, schema);
+  if (violations.length) return violations;
+  // The bundled schema validator supports enum but does not implement uniqueItems.
+  for (const [i, finding] of doc.findings.entries()) {
+    const topics = finding.topics;
+    if (topics && new Set(topics).size !== topics.length) {
+      violations.push({ path: `$.findings[${i}].topics`, message: 'topic IDs must be unique' });
+    }
+  }
+  return violations;
+}
+
+function checkAttemptScope(run, add) {
+  const included = new Set(run.sections);
+  const inspected = new Set(run.reviewSections);
+  const assigned = [...run.reviewSections, ...Object.keys(run.carried || {})];
+  if (included.size !== run.sections.length || new Set(assigned).size !== assigned.length ||
+      assigned.length !== included.size || assigned.some(id => !included.has(id))) {
+    add('RUN-SCOPE', 'each included section must appear exactly once in reviewSections or carried');
+  }
+  for (const topic of run.topics || []) {
+    if (!Object.hasOwn(TOPICS, topic) || !inspected.has(TOPICS[topic])) {
+      add('RUN-SCOPE', `topic "${topic}" must belong to a reviewed section`);
+    }
+  }
+  for (const id of Object.keys(run.stale || {})) {
+    if (included.has(id)) add('RUN-SCOPE', `stale section "${id}" is included in sections`);
+  }
+}
+
+// Paths below a canonical output root must identify the recorded artifact itself.
+function directPath(...parts) {
+  const path = join(...parts);
+  if (realpathSync(path) !== path) throw new Error(`artifact path redirects: ${path}`);
+  return path;
+}
+
+function checkCarriedSources({ run, dir, docs }, add) {
+  const carried = Object.entries(run.carried || {});
+  if (!carried.length) return;
+  const commit = run.repo.commit;
+  const outRoot = resolve(dir, '..', '..');
+  let root, attemptDir, published;
+  try {
+    root = realpathSync(outRoot);
+    attemptDir = directPath(root, relative(outRoot, dir));
+    const index = readJson(directPath(root, 'index.json'));
+    published = new Set(index.runs.filter(entry => entry.commit === commit).map(entry => entry.dir));
+  } catch (e) {
+    add('CARRIED-SOURCE', `cannot verify published attempts: ${e.message}`);
+    return;
+  }
+  for (const [id, origin] of carried) {
+    if (!validAttemptPath(origin, commit) || !published.has(origin) || !/^[a-z][a-z0-9-]*$/.test(id)) {
+      add('CARRIED-SOURCE', `${id}: expected a published source attempt for this commit, got "${origin}"`);
+      continue;
+    }
+    if (!Object.hasOwn(docs, id)) continue; // SECTION-MISSING reports the absent copy.
+    const sourceDir = join(root, origin);
+    try {
+      const source = readJson(directPath(sourceDir, 'run.json'));
+      const reviewed = source.reviewSections ?? source.sections;
+      const current = docs[id];
+      if (sourceDir === attemptDir || source.repo?.commit !== commit ||
+          source.scoringVersion !== run.scoringVersion || current.doc.score?.scoringVersion !== run.scoringVersion ||
+          !Array.isArray(reviewed) || !reviewed.includes(id)) {
+        add('CARRIED-SOURCE', `${id}: ${origin} must have reviewed this section at the same commit and scoring version`);
+        continue;
+      }
+      const filename = `${id}.findings.json`;
+      const original = readFileSync(directPath(sourceDir, filename));
+      if (!original.equals(readFileSync(directPath(attemptDir, filename)))) {
+        add('CARRIED-SOURCE', `${id}: findings differ from ${origin}/${id}.findings.json`);
+      }
+    } catch (e) {
+      add('CARRIED-SOURCE', `${id}: cannot verify ${origin}: ${e.message}`);
+    }
+  }
+}
+
 // START_CONTRACT: lintRun
 //   PURPOSE: Decide whether a review run may be reported.
 //   INPUTS: { runDir: string, repo: string - reviewed repository, rubricsDir?: string }
@@ -99,7 +182,8 @@ export function lintRun({ runDir, repo, rubricsDir }) {
 
   // START_BLOCK_LINT_RUN
   const runAdd = mk('run');
-  for (const v of validate(run, readJson(join(schemaDir, 'run.schema.json')))) runAdd('SCHEMA', `run.json ${v.path}: ${v.message}`);
+  const runViolations = validate(run, readJson(join(schemaDir, 'run.schema.json')));
+  for (const v of runViolations) runAdd('SCHEMA', `run.json ${v.path}: ${v.message}`);
   const commit = run.repo && run.repo.commit;
   if (!commit || !commitExists(root, commit)) {
     runAdd('RUN-COMMIT', `${commit} not found in ${root}`);
@@ -109,6 +193,10 @@ export function lintRun({ runDir, repo, rubricsDir }) {
   const head = git(root, ['rev-parse', 'HEAD']);
   if (head && head !== commit) mk('run', warnings)('HEAD-MOVED', `HEAD is ${head.slice(0, 12)}, the run reviewed ${commit.slice(0, 12)}`);
   for (const id of run.sections || []) if (!docs[id]) runAdd('SECTION-MISSING', `${id}.findings.json is absent`);
+  if (run.reviewSections !== undefined && !runViolations.length) {
+    checkAttemptScope(run, runAdd);
+    checkCarriedSources({ run, dir, docs }, runAdd);
+  }
   const reconPath = join(dir, 'recon.json');
   if (existsSync(reconPath)) {
     const recon = readJson(reconPath);
@@ -123,7 +211,7 @@ export function lintRun({ runDir, repo, rubricsDir }) {
   for (const [id, { doc, text }] of Object.entries(docs)) {
     const add = mk(id);
     const warn = mk(id, warnings);
-    const violations = validate(doc, findingsSchema);
+    const violations = validateFindings(doc, findingsSchema);
     for (const v of violations) add('SCHEMA', `${v.path}: ${v.message}`);
     for (const s of findSecrets(text)) add('SECRET', `${s.kind} (${s.sample})`);
     if (violations.length) continue;
@@ -221,7 +309,7 @@ export function checkFile({ file, repo, rubricsDir }) {
   const draft = base.endsWith('.draft.json');
   const schema = readJson(join(schemaDir, 'findings.schema.json'));
   if (draft) schema.$defs.finding.required = schema.$defs.finding.required.filter((k) => k !== 'verification');
-  const violations = validate(doc, schema);
+  const violations = validateFindings(doc, schema);
   for (const v of violations) add('SCHEMA', `${v.path}: ${v.message}`);
   for (const s of findSecrets(JSON.stringify(doc))) add('SECRET', `${s.kind} (${s.sample})`);
   if (violations.length) return { kind: draft ? 'draft' : 'findings', errors };

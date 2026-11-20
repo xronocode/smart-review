@@ -59,7 +59,9 @@ full attention to findings that are new or changed in this pass.
 
 ## Across findings
 
-- Merge findings that share a root cause into one, keeping all evidence lines and the stable `key`.
+- Merge findings that share a root cause. Keep its stable `key`, supporting evidence and the
+  distinct `topics` supported by that evidence. Topic tags may span rubrics. One section owns
+  the finding and its score deduction.
 - Split a finding that bundles two unrelated causes.
 - Renumber `id`s by severity: `F-001` is the most severe.
 - Check that no finding belongs to another section's scope. Remove one that does and name it in your reply, so the orchestrator can pass it to the owning section. The same holds for a sub-claim inside a finding: cut it and name it. You do not need to read the other sections' documents; the orchestrator compares sections.
@@ -67,7 +69,8 @@ full attention to findings that are new or changed in this pass.
 
 ## Rest of the document
 
-- Check that `criteria` covers every id in `rubrics/<section>.json` exactly once, and that each note is consistent with the findings you kept.
+- Check that `criteria` covers every id in `rubrics/<section>.json` exactly once, including
+  for a section selected by topic. Each note must agree with the findings you kept.
 - Check `previous` accounting when a previous run exists: every previous key is still present or explained; verify one `fixed` claim per previous finding by looking at the code.
 - Rewrite `verdict` and `summary` if your changes made them wrong.
 - Make sure `limits` is honest and non-empty.

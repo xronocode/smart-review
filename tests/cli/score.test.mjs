@@ -8,7 +8,7 @@ import { main } from '../../skills/smart-review/cli/smart-review.mjs';
 import { validate } from '../../skills/smart-review/cli/lib/validate.mjs';
 import { finding, findingsDoc, makeRepo, write, SKILL, read } from './helpers.mjs';
 
-const doc = (findings) => ({ section: 'security', findings });
+const doc = (findings) => ({ section: 'security', findings, criteria: [{ id: 'sample', status: 'scored', score: 4 }] });
 const f = (severity, over = {}) => finding(1, { severity, ...over });
 
 test('no findings scores 100 with no steps', () => {
@@ -56,7 +56,7 @@ test('an accepted risk removes low and medium deductions only', () => {
   const s = computeScore(doc([finding(1, { severity: 'medium' }), finding(2, { severity: 'high' })]), accepted);
   assert.equal(s.raw, 85);
   assert.deepEqual(s.notCounted, [{ id: 'F-001', reason: 'accepted-risk' }]);
-  const other = computeScore({ section: 'tests', findings: [finding(1)] }, accepted);
+  const other = computeScore({ ...doc([finding(1)]), section: 'tests' }, accepted);
   assert.equal(other.value, 94, 'acceptance is scoped to its section');
 });
 
@@ -78,7 +78,7 @@ test('bands split at 70 and 40', () => {
 test('medium findings together deduct at most the limit', () => {
   const meds = (n) => Array.from({ length: n }, (_, i) => finding(i + 1, { severity: 'medium', key: `med-${i}` }));
   const ten = computeScore(doc(meds(10)));
-  assert.equal(ten.scoringVersion, '3');
+  assert.equal(ten.scoringVersion, '4');
   assert.equal(ten.value, 100 - MEDIUM_TOTAL_MAX);
   assert.equal(ten.band, 'good');
   assert.deepEqual(ten.steps, [{ severity: 'medium', count: 10, weight: 6, subtotal: 30, running: 70, limited: 30 }]);
@@ -101,9 +101,9 @@ test('one high finding still outweighs any number of medium findings', () => {
 });
 
 test('the overall score inherits the per-section caps', () => {
-  const runMeta = { repo: { commit: 'a'.repeat(40), branch: 'main', dirty: false, name: 'demo' }, profile: 'quick', scoringVersion: '3', startedAt: '2026-11-12T00:00:00.000Z', sections: ['security', 'tests', 'dependencies', 'ai-readiness', 'hygiene'] };
+  const runMeta = { repo: { commit: 'a'.repeat(40), branch: 'main', dirty: false, name: 'demo' }, profile: 'quick', scoringVersion: '4', startedAt: '2026-11-12T00:00:00.000Z', sections: ['security', 'tests', 'dependencies', 'ai-readiness', 'hygiene'] };
   const scored = (section, findings) => {
-    const entry = { doc: { section, rubricVersion: '1.0.0', verdict: 'v', summary: 's', findings } };
+    const entry = { doc: { ...doc(findings), section, rubricVersion: '1.0.0', verdict: 'v', summary: 's' } };
     entry.doc.score = computeScore(entry.doc);
     return entry;
   };

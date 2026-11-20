@@ -31,10 +31,13 @@ checkable.
 ## Rules
 
 - Read-only. The only file you write is `<runDir>/drafts/<section>.draft.json`.
-- Follow the rubric's method in order. Do not skip its mapping pass.
+- Inspect a section listed in `run.reviewSections`. Read `run.topics` for the user's requested
+  focus, then follow the entire owner rubric, including its mapping pass and every criterion.
 - With a previous run, depth follows the diff. Re-open the evidence of every previous finding on this commit. Redo the method in full for the parts of the repository that changed since `previous.commit` and for what the previous `checked` did not cover; for unchanged parts already covered, say in `checked` that the coverage is carried over and from which commit. A previous run is a lead, not a proof: correct anything in it that does not reproduce.
 - Commands: read-only `git`, file reads, a short inline script that only parses repository files to count something, and the rubric's optional tools under the rubric's conditions. No installs, no builds, no network unless the rubric allows it for an already installed tool and the user permitted it.
-- Stay inside your rubric's scope. Leave other topics to their sections. If you notice something that belongs to another section, mention it in your reply to the orchestrator instead of reporting it.
+- Report a root cause in the section that owns it. A finding in your section may touch topics
+  from several rubrics. List the applicable IDs in its optional `topics` array. If the cause
+  belongs to another section, pass the lead to the orchestrator.
 - A tool that writes a report file must write it inside `<runDir>/drafts/` or to `/dev/null`, never into the repository or elsewhere.
 - Evidence lines must be inside the reviewed repository. If you read something outside it to understand behavior (an installed copy of a dependency at the locked version, a toolchain's documentation on disk), do it read-only and say so in `limits`; a finding must still stand on repository lines. When a link was read outside the repository in an earlier run and the copy is not at hand now, keep the finding, say in `what` that the link rests on the earlier reading, and set `confidence` no higher than `medium`.
 - When you state a count, say how you counted it (the command or pattern and the scope), so the verifier can reproduce it. If a count of the previous run does not reproduce by its stated method, recount, state your method, and do not present the difference as a change in the code.

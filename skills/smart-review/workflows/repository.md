@@ -3,7 +3,7 @@
 This workflow runs the scored sections of smart-review (`security`, `tests`, `dependencies`,
 `ai-readiness`, `hygiene`, and any section that ships a rubric in `rubrics/`). The `changes`
 section answers "what is wrong with this diff"; these sections answer "what state is this
-repository in at this commit". `SKILL.md` routes here with the list of sections to run. You
+repository in at this commit". `SKILL.md` routes here with the requested sections and topics. You
 coordinate the work; the model finds and explains, the CLI counts and checks. Paths below are
 relative to the skill directory.
 
@@ -25,27 +25,32 @@ relative to the skill directory.
 
 ## Step 2 — Start the run and show the plan
 
-`SKILL.md` already chose the sections. Map them to the `start` arguments:
+`SKILL.md` maps the user's wording to canonical section and topic IDs. Pass these to `start`.
 
-| Request | Arguments | Sections |
+| Request | Selection arguments | Sections to inspect |
 |---|---|---|
-| no section named, or `full` | `--profile full` | every section with a rubric: security, tests, dependencies, ai-readiness, hygiene |
+| no section or topic named, or `full` | `--profile full` | all five sections |
 | `quick` | `--profile quick` | security, tests, dependencies |
-| one or several sections | `--sections a,b` | exactly those |
+| one or several sections | `--sections a,b` | the named sections |
+| dead code and authentication | `--topics dead-code,authn` | hygiene and security |
+| «Проверь секреты и тесты» / “Check secrets and tests” | `--topics secrets --sections tests` | security and tests |
 
-Run `smart-review start --repo <repo> --profile <p> --lang <lang> [--out <dir>]`. It pins the
-run to `HEAD` and prints `run.json` with `runDir`.
+Run `smart-review start --repo <repo> --lang <lang>` with the selection arguments above and
+the requested `--out`, if any. Read the returned `runDir` and the metadata pinned to `HEAD`.
 
-Show the plan before working:
+Before recon or inspection, disclose the scope from the returned metadata in the user's language.
 
-```
-Review plan
-  Repository: <name> @ <commit-12> (<branch>)
-  Profile:    full → security, tests, dependencies, ai-readiness, hygiene
-  Agents:     1 recon + 5 inspectors + 5 verifiers
-  Output:     <runDir>
-  Previous:   <commit-12 of previous run | none>
-```
+- Name the repository, commit, requested topics (`run.topics`), and full sections to inspect
+  (`run.reviewSections`). Each distinct owner gets one inspector and one verifier.
+- List all sections included in the report (`run.sections`). For each entry in `run.carried`,
+  identify the section and the earlier attempt that supplied its findings for this commit.
+  The CLI carries those documents unchanged. List any `run.stale` sections with their reasons
+  for exclusion.
+- Give the agent count, output directory, and previous commit if present.
+
+For example, after a compatible full review, a secrets-and-tests request inspects all of
+security and tests. If `start` carries dependencies, AI readiness, and hygiene, the report
+includes five sections and the current attempt needs two inspectors and two verifiers.
 
 If `priorPass` is not empty, this commit was reviewed before: say so, and tell the inspectors to
 build on `prior/`. If `repo.dirty` is true, say that uncommitted changes are not reviewed. If the user is present
@@ -58,7 +63,8 @@ Read its overview. If recon reports that `HEAD` is not the run commit, stop.
 
 ## Step 4 — Inspect
 
-For each section in `run.json`, launch `agents/inspector.md` with `section`, `repo`, `runDir`, `lang`.
+For each section in `run.reviewSections`, launch `agents/inspector.md` with `section`, `repo`,
+`runDir`, and `lang`. Cover every criterion in its rubric, including when selected by a topic.
 Each writes `<runDir>/drafts/<section>.draft.json`.
 
 - **With subagents:** launch all inspectors in parallel, at most five at a time. They are independent.
@@ -66,7 +72,7 @@ Each writes `<runDir>/drafts/<section>.draft.json`.
 
 ## Step 5 — Verify
 
-For each draft, launch `agents/verifier.md` (parallel where possible; start a section's verifier as soon as its draft exists). It re-reads the code,
+For each newly inspected section's draft, launch `agents/verifier.md` (parallel where possible; start a section's verifier as soon as its draft exists). It re-reads the code,
 refutes or confirms each finding, merges duplicates, and writes `<runDir>/<section>.findings.json`.
 
 Without subagents, do the verification yourself as a distinct pass after all drafts exist:
@@ -76,16 +82,18 @@ Never skip this step. A draft is not a result.
 
 **Across sections.** Inspectors work independently, so two sections can report the same root cause
 (a missing tool that is both a documentation gap and a hygiene problem). After verification,
-read the finding titles of all sections side by side. Where two findings share a root cause,
-keep it in the section whose rubric owns the topic and replace the other with a sentence in the
-relevant criterion note that names the owning finding. `smart-review lint` warns
+compare the keys and evidence across all included sections, including carried results. Where
+two sections identify one root cause, retain one stable key in the owning section and put
+the applicable topic IDs on that finding. Other reviewed sections can cite its key in a
+criterion note. When the finding already exists in a carried document, cite that finding in
+the freshly reviewed section. `smart-review lint` warns
 (`CROSS-SECTION-DUP`) when two sections start a finding at the same evidence line; treat the
 warning as a prompt to look, since the same line can legitimately matter to two sections.
 Inspectors and verifiers also report suspected product defects that no section owns (a
 correctness bug they passed while reading). List those for the user after the scores, as
 leads that were not verified.
-Pass on to the owning inspector's document anything an inspector or verifier reported as
-belonging to another section, with the same evidence standard.
+Pass a lead to the owning inspector when that section is being reviewed. If the owner was
+carried and the lead would change its result, disclose the lead and which section needs a rerun.
 
 Ownership when both sections ran:
 
@@ -130,7 +138,9 @@ Since the previous run (<commit-12>): 3 fixed, 1 still present, 2 new, 1 missed 
 Report: <runDir>/report.html
 ```
 
-Then the main limits in one or two lines. Do not paste the full report. Mention that
+Identify which sections were inspected this time and which came from earlier attempts. Name
+any stale exclusions. Report insufficient data or non-applicability when the CLI returns that
+result for a section. Give the main limits in one or two lines. Do not paste the full report. Mention that
 `.smart-review/` now exists in the repository if you wrote there, and whether it is ignored
 by git; do not change `.gitignore` yourself.
 

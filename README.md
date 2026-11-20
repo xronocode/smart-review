@@ -198,10 +198,13 @@ The CLI ships inside the skill (`skills/smart-review/cli/`), needs only Node.js 
 git, and has no dependencies:
 
 ```bash
-node skills/smart-review/cli/smart-review.mjs lint .smart-review/runs/<commit> --repo .
+node skills/smart-review/cli/smart-review.mjs start --repo . --topics secrets,authn --sections tests
+node skills/smart-review/cli/smart-review.mjs lint "$RUN_DIR" --repo .
 ```
 
 Exit code 0 means the run checks out, 1 means lint errors, 2 means a usage problem.
+
+Use the `runDir` printed by `start` for `RUN_DIR`. You can also ask the skill to recheck secrets, authentication, dead code, vulnerable dependencies or dependency freshness. It discloses the full owner sections it will inspect. On the same commit, a successful repeat publishes fresh results alongside compatible prior sections. Sections with zero assessed criteria have no numeric score.
 
 ### Tell the reviewer what you already know
 

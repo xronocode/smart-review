@@ -33,6 +33,7 @@ A finding is a confirmed, independent problem with evidence on the reviewed comm
 |---|---|
 | `id` | `F-001`, `F-002`, … in order of severity |
 | `key` | stable kebab-case name of the *root cause*, e.g. `preview-renders-active-html`. It identifies the finding across runs: reuse the previous run's key when the root cause is the same, and do not put line numbers or counts in it |
+| `topics` | optional array of distinct IDs from `secrets`, `authn`, `dead-code`, `vulnerabilities`, and `freshness`. Omit when none applies. Older documents may omit the field. |
 | `title` | what is wrong, in plain words, without severity words |
 | `severity` | `critical`, `high`, `medium`, `low`, or `info`, using the rubric's anchors |
 | `confidence` | `high`: you read the whole path. `medium`: the path is clear but one link is inferred. `low`: plausible but unproven — prefer `unconfirmed` |
@@ -48,6 +49,9 @@ A finding is a confirmed, independent problem with evidence on the reviewed comm
 Rules that keep findings honest:
 
 - **One root cause, one finding.** Five symptoms of one missing check are one finding with five evidence lines.
+  The containing document's `section` owns the finding. For example, a committed credential
+  in obsolete code can have `"topics": ["secrets", "dead-code"]` on one security finding.
+  Use the same key across reruns. Topic tags describe the evidence and add no deductions.
 - **No evidence, no finding.** If you cannot point to a line, it goes to `unconfirmed` or to a criterion note.
 - **Absence is not a finding by itself.** A missing defense or practice becomes a finding only with a concrete consequence.
 - **Do not inflate.** Severity follows the rubric anchors and the real precondition, not how alarming the category sounds.
@@ -63,7 +67,10 @@ One entry per criterion id of the rubric, no more, no fewer.
 - `status: "na"`: the criterion does not apply to this repository. Say why in `note`.
 - `status: "unknown"`: you could not establish it from available evidence. Say what is missing in `note`.
 
-`note` is one or two sentences of repository-specific evidence. Criteria describe the state; they never change the score, so do not use them to hide or double-count a finding.
+`note` is one or two sentences of repository-specific evidence. A section needs at least
+one assessed criterion for a numeric score. The CLI uses the findings to calculate
+deductions. When all criteria are `na`, the section is inapplicable. When applicable
+criteria exist and all are `unknown`, the section has insufficient data.
 
 ## Checked and limits
 

@@ -9,7 +9,7 @@
 // START_MODULE_MAP
 //   main - dispatch one CLI command and return its exit code
 // END_MODULE_MAP
-import { existsSync, realpathSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { CliError, TOOL_VERSION, parseArgs, readJson, writeJson, skillRoot } from './lib/util.mjs';
@@ -17,13 +17,15 @@ import { computeScore, SCORING_VERSION, WEIGHTS, CAPS, MEDIUM_TOTAL_MAX, LOW_TOT
 import { lintRun, checkFile, RULES } from './lib/lint.mjs';
 import { diffRuns } from './lib/diff.mjs';
 import { startRun, loadRun } from './lib/run.mjs';
-import { loadRubric, loadProfiles, listRubrics } from './lib/rubrics.mjs';
+import { loadRubric, loadProfiles, listRubrics, TOPICS } from './lib/rubrics.mjs';
 import { buildSummary, renderMarkdown, renderHtml } from './lib/report.mjs';
+import { labels } from './lib/i18n.mjs';
 
 const HELP = `smart-review ${TOOL_VERSION} — deterministic scoring and verification for repository reviews
 
 Usage:
-  smart-review start  --repo <path> [--profile quick|full | --sections a,b] [--out <dir>] [--lang en|ru] [--name <repo-name>]
+  smart-review start  --repo <path> [--profile quick|full | --sections a,b | --topics a,b] [--out <dir>] [--lang en|ru] [--name <repo-name>]
+                      --sections and --topics may be combined; topic owners are reviewed in full
   smart-review score  <run-dir | findings.json>
   smart-review check  <recon.json | draft.json | findings.json> --repo <path>   check one document while working
   smart-review lint   <run-dir> --repo <path> [--json]
@@ -40,6 +42,13 @@ function need(flags, name) {
   return flags[name];
 }
 
+function selection(flags, name) {
+  if (!(name in flags)) return undefined;
+  const values = need(flags, name).split(',').map(value => value.trim());
+  if (values.some(value => !value)) throw new CliError(`--${name} needs a comma-separated list`);
+  return values;
+}
+
 function scoreTarget(target, out) {
   const abs = resolve(target);
   if (!existsSync(abs)) throw new CliError(`${abs} does not exist`);
@@ -47,12 +56,19 @@ function scoreTarget(target, out) {
   let accepted = [];
   if (statSync(abs).isDirectory()) {
     const { run, docs } = loadRun(abs);
+    if (run.scoringVersion !== SCORING_VERSION) throw new CliError('this attempt uses an older scoring version; start a new review');
     accepted = run.accepted || [];
-    for (const d of Object.values(docs)) files.push(d.path);
+    for (const [id, entry] of Object.entries(docs)) {
+      if (!Object.hasOwn(run.carried || {}, id)) files.push(entry.path);
+    }
   } else {
     files.push(abs);
     const runPath = join(dirname(abs), 'run.json');
-    if (existsSync(runPath)) accepted = readJson(runPath).accepted || [];
+    if (existsSync(runPath)) {
+      const run = readJson(runPath);
+      if (run.scoringVersion !== SCORING_VERSION) throw new CliError('this attempt uses an older scoring version; start a new review');
+      accepted = run.accepted || [];
+    }
   }
   const results = {};
   for (const f of files) {
@@ -62,7 +78,7 @@ function scoreTarget(target, out) {
     doc.score = computeScore(doc, accepted);
     writeJson(f, doc);
     results[doc.section] = doc.score.value;
-    out(`${doc.section}: ${doc.score.value}/100 (${doc.score.band})`);
+    out(`${doc.section}: ${doc.score.value === null ? labels(doc.lang).scoreStatus[doc.score.reason] : `${doc.score.value}/100 (${doc.score.band})`}`);
   }
   return results;
 }
@@ -83,7 +99,7 @@ function doDiff(runDir, flags) {
   return d;
 }
 
-function doReport(runDir, flags, out) {
+function doReport(runDir, flags) {
   const { dir, run, docs } = loadRun(runDir);
   if (!Object.keys(docs).length) throw new CliError(`${dir} has no findings documents`);
   const lang = flags.lang && flags.lang !== true ? flags.lang : run.lang || 'en';
@@ -94,24 +110,52 @@ function doReport(runDir, flags, out) {
   writeJson(join(dir, 'summary.json'), summary);
   writeFileSync(join(dir, 'report.md'), renderMarkdown(ctx));
   writeFileSync(join(dir, 'report.html'), renderHtml(ctx));
-  // START_BLOCK_UPDATE_RUN_INDEX
-  const outRoot = resolve(dir, '..', '..');
-  const indexPath = join(outRoot, 'index.json');
-  const index = existsSync(indexPath) ? readJson(indexPath) : { schemaVersion: 1, runs: [] };
-  const entry = {
-    commit: run.repo.commit,
-    dir: relative(outRoot, dir).split('\\').join('/'),
-    date: run.startedAt,
-    overall: summary.overall,
-    sections: Object.fromEntries(Object.entries(summary.sections).map(([id, a]) => [id, a.score])),
-  };
-  index.runs = index.runs.filter((r) => r.commit !== entry.commit).concat(entry);
-  writeJson(indexPath, index);
-  // END_BLOCK_UPDATE_RUN_INDEX
-  out(`overall: ${summary.overall}/100`);
+  return summary;
+}
+
+function printReport(dir, summary, lang, out) {
+  out(`overall: ${summary.overall === null ? labels(lang).scoreStatus[summary.overallStatus] : `${summary.overall}/100`}`);
   out(join(dir, 'report.md'));
   out(join(dir, 'report.html'));
-  return summary;
+}
+
+function publish(dir, run, summary) {
+  const root = resolve(dir, '..', '..');
+  const indexPath = join(root, 'index.json');
+  const publications = join(root, '.publications');
+  mkdirSync(publications, { recursive: true });
+  const attempt = relative(root, dir).split('\\').join('/');
+  for (;;) {
+    const index = existsSync(indexPath) ? readJson(indexPath) : { schemaVersion: 1, runs: [] };
+    if (index.runs.some(entry => entry.dir === attempt)) return;
+    const latest = index.runs.findLast(entry => entry.commit === run.repo.commit);
+    if ((latest?.dir || null) !== (run.baseDir || null)) throw new CliError('a newer attempt was published for this commit; start a new review from it');
+    const slot = join(publications, String(index.runs.length + 1));
+    index.runs.push({
+      commit: run.repo.commit, dir: attempt, date: run.startedAt, overall: summary.overall,
+      sections: Object.fromEntries(Object.entries(summary.sections).map(([id, section]) => [id, section.score])),
+    });
+    if (!existsSync(slot)) {
+      const candidate = mkdtempSync(join(publications, 'pending-'));
+      try {
+        writeJson(join(candidate, 'index.json'), index);
+        writeFileSync(join(candidate, 'attempt'), attempt);
+        try {
+          renameSync(candidate, slot);
+        } catch (error) {
+          if (!existsSync(slot)) throw error;
+        }
+      } finally {
+        if (existsSync(candidate)) rmSync(candidate, { recursive: true });
+      }
+    }
+    try {
+      renameSync(join(slot, 'index.json'), indexPath);
+    } catch (error) {
+      if (error.code !== 'ENOENT' || !existsSync(indexPath)) throw error;
+      if (readJson(indexPath).runs.length < index.runs.length) throw new CliError('publication history disagrees with index.json; restore the output directory from its last consistent snapshot');
+    }
+  }
 }
 
 function printLint(res, flags, out) {
@@ -155,6 +199,7 @@ export function main(argv, out = console.log) {
         mediumTotalMax: MEDIUM_TOTAL_MAX,
         lowTotalMax: LOW_TOTAL_MAX,
         profiles: loadProfiles(),
+        topics: TOPICS,
         sections: listRubrics().map((id) => {
           const r = loadRubric(id);
           return { id, version: r.version, question: r.question.en, criteria: r.criteria.length };
@@ -164,12 +209,15 @@ export function main(argv, out = console.log) {
       else {
         for (const a of data.sections) out(`${a.id.padEnd(14)} v${a.version}  ${a.criteria} criteria  ${a.question}`);
         for (const [p, ids] of Object.entries(data.profiles)) out(`profile ${p}: ${ids.join(', ')}`);
+        for (const [topic, section] of Object.entries(TOPICS)) out(`topic ${topic}: ${section}`);
       }
       return 0;
     }
     if (cmd === 'start') {
-      const sections = flags.sections && flags.sections !== true ? flags.sections.split(',').map((s) => s.trim()).filter(Boolean) : undefined;
-      const res = startRun({ repo: need(flags, 'repo'), out: flags.out === true ? undefined : flags.out, profile: flags.profile === true ? undefined : flags.profile, sections, lang: flags.lang === 'ru' ? 'ru' : 'en', name: flags.name === true ? undefined : flags.name });
+      const sections = selection(flags, 'sections');
+      const topics = selection(flags, 'topics');
+      if (flags.profile && (topics || sections)) throw new CliError('choose a profile or an explicit selection');
+      const res = startRun({ repo: need(flags, 'repo'), out: flags.out === true ? undefined : flags.out, profile: flags.profile === undefined ? undefined : need(flags, 'profile'), sections, topics, lang: flags.lang === 'ru' ? 'ru' : 'en', name: flags.name === true ? undefined : flags.name });
       out(JSON.stringify({ runDir: res.runDir, priorPass: res.prior, ...res.run }, null, 2));
       return 0;
     }
@@ -200,16 +248,20 @@ export function main(argv, out = console.log) {
       return 0;
     }
     if (cmd === 'report') {
-      doReport(target, flags, out);
+      const summary = doReport(target, flags);
+      printReport(resolve(target), summary, flags.lang || readJson(join(target, 'run.json')).lang, out);
       return 0;
     }
     if (cmd === 'finish') {
+      const { dir, run } = loadRun(target);
       scoreTarget(target, out);
       const res = lintRun({ runDir: target, repo: need(flags, 'repo') });
       printLint(res, flags, out);
       if (res.errors.length) return 1;
       doDiff(target, flags);
-      doReport(target, flags, out);
+      const summary = doReport(target, flags);
+      publish(dir, run, summary);
+      printReport(dir, summary, flags.lang || run.lang, out);
       return 0;
     }
     throw new CliError(`unknown command "${cmd}"`);

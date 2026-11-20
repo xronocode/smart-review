@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.1.0 — 2026-11-20
+
+- Select secrets, authentication, dead code, dependency vulnerabilities and freshness by topic. The plan names the whole sections that will run.
+- Reruns create distinct attempts. Successful verification publishes fresh and compatible same-commit results together with their provenance. Earlier reports remain accessible.
+- Scoring v4 reports assessed coverage. An entirely unknown or inapplicable section has no numeric score and is excluded from the average.
+
 ## v2.0.0 — 2026-11-12
 
 smart-review becomes a plugin made of **sections**. The diff review is now the `changes`

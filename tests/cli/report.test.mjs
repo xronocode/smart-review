@@ -171,7 +171,8 @@ test('starting again on the same commit keeps the earlier findings as the prior 
     const lines = [];
     main(['start', '--repo', fx.repo, '--profile', 'quick'], (l) => lines.push(l));
     const again = JSON.parse(lines.join('\n'));
-    assert.equal(again.runDir, fx.run.runDir);
+    assert.notEqual(again.runDir, fx.run.runDir);
+    assert.ok(existsSync(join(fx.run.runDir, 'report.html')));
     assert.deepEqual(again.priorPass.sort(), ['dependencies', 'security', 'tests']);
     assert.equal(read(join(again.runDir, 'prior', 'security.findings.json')).score.value, 69);
     for (const gone of ['security.findings.json', 'report.html', 'summary.json', 'drafts']) assert.equal(existsSync(join(again.runDir, gone)), false, gone);

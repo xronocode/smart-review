@@ -41,6 +41,11 @@
       "properties": {
         "id": { "type": "string", "pattern": "^F-\\d{3}$" },
         "key": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{2,79}$" },
+        "topics": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "enum": ["secrets", "authn", "dead-code", "vulnerabilities", "freshness"] }
+        },
         "title": { "type": "string", "minLength": 1 },
         "severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "info"] },
         "confidence": { "type": "string", "enum": ["high", "medium", "low"] },

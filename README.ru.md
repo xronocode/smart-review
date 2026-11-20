@@ -200,10 +200,13 @@ CLI поставляется внутри скилла (`skills/smart-review/cli
 и git, зависимостей нет:
 
 ```bash
-node skills/smart-review/cli/smart-review.mjs lint .smart-review/runs/<commit> --repo .
+node skills/smart-review/cli/smart-review.mjs start --repo . --topics secrets,authn --sections tests
+node skills/smart-review/cli/smart-review.mjs lint "$RUN_DIR" --repo .
 ```
 
 Код выхода 0 — запуск прошёл проверку, 1 — ошибки линта, 2 — команда вызвана неправильно.
+
+В `RUN_DIR` укажите путь `runDir` из вывода `start`. Можно попросить скилл перепроверить секреты, аутентификацию, мёртвый код, уязвимости или актуальность зависимостей. Перед стартом он покажет, какие секции прочитает целиком. При повторе на том же коммите успешная проверка объединяет новые и совместимые прежние результаты. Секция без оценённых критериев остаётся без числового балла.
 
 ### Расскажите ревьюеру то, что вы уже знаете
 
