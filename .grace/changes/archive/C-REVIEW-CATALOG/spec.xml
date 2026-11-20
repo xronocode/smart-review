@@ -1,4 +1,4 @@
-<GraceChangeSpec graceVersion="4.0" status="approved">
+<GraceChangeSpec graceVersion="4.0" status="applied">
   <C-REVIEW-CATALOG>
     <Summary>Complete the remaining review catalogue and evaluate its usefulness on different repository types.</Summary>
     <Goals>
