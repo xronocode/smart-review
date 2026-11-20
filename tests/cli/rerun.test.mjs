@@ -36,7 +36,7 @@ test('full then secrets and tests publishes a complete report only after success
     assert.deepEqual(retry.reviewSections, ['tests', 'security']);
     assert.deepEqual(retry.topics, ['secrets']);
     assert.deepEqual(retry.sections, full.sections);
-    assert.deepEqual(Object.keys(retry.carried).sort(), ['ai-readiness', 'dependencies', 'hygiene']);
+    assert.deepEqual(Object.keys(retry.carried).sort(), full.sections.filter(id => !['security', 'tests'].includes(id)).sort());
     assert.equal(retry.carried.hygiene, baseline.dir);
     assert.equal(finish(retry), 1);
     assert.equal(index().at(-1).dir, baseline.dir);
@@ -160,7 +160,61 @@ test('a retry completes an interrupted index publication without losing the prev
   }
 });
 
-test('finish explains thirteen unknown security criteria in the CLI and published report', () => {
+test('a hosting policy snapshot cannot be carried as current on the same commit', t => {
+  const fixture = makeRepo();
+  t.after(fixture.cleanup);
+  const { start, finish } = session(fixture);
+  const first = start('--sections', 'delivery,tests');
+  const doc = findingsDoc('delivery', fixture.commit, []);
+  doc.checked = [{ area: 'Merge policy', note: 'Read the effective settings supplied for the release branch.', asOf: '2026-11-15' }];
+  write(join(first.runDir, 'delivery.findings.json'), doc);
+  write(join(first.runDir, 'tests.findings.json'), findingsDoc('tests', fixture.commit, []));
+  assert.equal(finish(first), 0);
+  for (const format of ['md', 'html']) assert.ok(readFileSync(join(first.runDir, 'report.' + format), 'utf8').includes('2026-11-15'));
+  const next = start('--sections', 'tests');
+  assert.deepEqual(next.sections, ['tests']);
+  assert.deepEqual(next.stale, { delivery: 'external-data' });
+  assert.deepEqual(next.carried, {});
+});
+
+test('reinspection recovers the latest original for each owner after a stale exclusion', t => {
+  const fixture = makeRepo();
+  t.after(fixture.cleanup);
+  const { start, inspect, finish, index } = session(fixture);
+  const first = start('--sections', 'delivery,hygiene');
+  inspect(first);
+  assert.equal(finish(first), 0);
+
+  const updated = start('--sections', 'delivery');
+  const delivery = findingsDoc('delivery', fixture.commit, [finding(1, { key: 'unchecked-release' })]);
+  delivery.checked[0].asOf = '2026-11-15';
+  write(join(updated.runDir, 'delivery.findings.json'), delivery);
+  assert.equal(finish(updated), 0);
+
+  const testsOnly = start('--sections', 'tests');
+  assert.deepEqual(testsOnly.stale, { delivery: 'external-data' });
+  inspect(testsOnly);
+  assert.equal(finish(testsOnly), 0);
+  assert.equal(Object.hasOwn(index().at(-1).sections, 'delivery'), false);
+  // Distinguish the genuinely reviewed original from a damaged carried copy.
+  const replica = join(testsOnly.runDir, 'hygiene.findings.json');
+  write(replica, { ...read(replica), verdict: 'Changed after publication' });
+
+  const retry = start('--sections', 'delivery,hygiene');
+  assert.deepEqual(retry.priorPass.sort(), ['delivery', 'hygiene']);
+  for (const [id, original] of [['delivery', updated], ['hygiene', first]]) {
+    const file = id + '.findings.json';
+    assert.deepEqual(readFileSync(join(retry.runDir, 'prior', file)), readFileSync(join(original.runDir, file)));
+    assert.equal(existsSync(join(retry.runDir, file)), false);
+  }
+  assert.deepEqual(retry.carried, { tests: index().at(-1).dir });
+  assert.equal(finish(retry), 1);
+  inspect(retry);
+  assert.equal(finish(retry), 0);
+  assert.equal(index().at(-1).sections.delivery, 100);
+});
+
+test('finish explains unassessed security criteria in the CLI and published report', () => {
   const fixture = makeRepo();
   try {
     const { start } = session(fixture);
@@ -173,10 +227,11 @@ test('finish explains thirteen unknown security criteria in the CLI and publishe
     assert.ok(lines.includes('security: Недостаточно данных'));
     assert.ok(lines.includes('overall: Недостаточно данных'));
     assert.equal(read(join(run.runDir, 'summary.json')).overall, null);
-    assert.deepEqual(read(join(run.runDir, 'summary.json')).coverage, { assessed: 0, applicable: 13 });
+    const count = doc.criteria.length;
+    assert.deepEqual(read(join(run.runDir, 'summary.json')).coverage, { assessed: 0, applicable: count });
     for (const filename of ['report.md', 'report.html']) {
       const report = readFileSync(join(run.runDir, filename), 'utf8');
-      assert.ok(report.includes('Недостаточно данных') && report.includes('0/13'));
+      assert.ok(report.includes('Недостаточно данных') && report.includes(`0/${count}`));
       assert.ok(!report.includes('100/100'));
     }
   } finally {

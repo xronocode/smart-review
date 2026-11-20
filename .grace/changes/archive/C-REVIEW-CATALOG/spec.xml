@@ -1,0 +1,19 @@
+<GraceChangeSpec graceVersion="4.0" status="applied">
+  <C-REVIEW-CATALOG>
+    <Summary>Complete the remaining review catalogue and evaluate its usefulness on different repository types.</Summary>
+    <Goals>
+      <Goal>Trace delivery safeguards, public API access policy in source and recovery from external service failures.</Goal>
+      <Goal>Route database queries, open-source readiness, frontend communication and components, configuration, cognitive debt, implementation unification and complexity concentration to evidence-backed reviews.</Goal>
+      <Goal>Represent externally performed web assessments separately from a source review and its score.</Goal>
+    </Goals>
+    <Constraints><Constraint>Preserve read-only, commit-bound inspection, stable finding ownership and previous run readability. Report absent surfaces and missing evidence distinctly. Use English and Russian topic names.</Constraint></Constraints>
+    <NonGoals><NonGoal>Executing the reviewed project, contacting its services, performing a web penetration test or changing repository hosting controls.</NonGoal></NonGoals>
+    <AcceptanceCriteria>
+      <Criterion>Each of the 22 user choices resolves to a section, a criterion owned by a section, or an external assessment status. The plan identifies scope, repeat results keep provenance and external evidence contributes no points.</Criterion>
+      <Criterion>Delivery and integration reliability have dedicated rubrics. A public API access check traces documented policy to handlers and returned fields. Conditional reviews explain applicability.</Criterion>
+      <Criterion>On several pinned project types, compare initial and repeated inspections with previously recorded expectations, false positives, coverage and cost. State the limits of the evidence.</Criterion>
+    </AcceptanceCriteria>
+    <AffectedAreas><M-SECTION-RUBRICS /><M-SECTION-CLI /><M-SECTION-SKILL /><M-SECTION-PLUGIN /></AffectedAreas>
+    <VerificationIntent><ExpectedCommand>make validate</ExpectedCommand><ExpectedCommand>make test</ExpectedCommand><ExpectedEvidence>Verified reports and a plan-to-actual comparison by selection.</ExpectedEvidence></VerificationIntent>
+  </C-REVIEW-CATALOG>
+</GraceChangeSpec>

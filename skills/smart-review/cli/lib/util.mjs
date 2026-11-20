@@ -23,7 +23,7 @@ import { execFileSync } from 'node:child_process';
 import { dirname, resolve, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const TOOL_VERSION = '2.1.0';
+export const TOOL_VERSION = '2.2.0';
 export const skillRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 export class CliError extends Error {}
@@ -70,8 +70,9 @@ export function writeJson(path, value) {
 // END_CONTRACT: git
 export function git(repo, args, { raw = false } = {}) {
   try {
-    const out = execFileSync('git', ['-C', repo, ...args], {
+    const out = execFileSync('git', ['-c', 'core.fsmonitor=false', '-C', repo, ...args], {
       encoding: 'utf8',
+      env: { ...process.env, GIT_NO_LAZY_FETCH: '1', GIT_ALLOW_PROTOCOL: '', GIT_OPTIONAL_LOCKS: '0' },
       stdio: ['ignore', 'pipe', 'ignore'],
       maxBuffer: 256 * 1024 * 1024,
     });

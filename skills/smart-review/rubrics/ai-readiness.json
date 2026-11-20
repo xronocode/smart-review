@@ -1,6 +1,6 @@
 {
   "id": "ai-readiness",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "title": {
     "en": "AI readiness",
     "ru": "Готовность к AI"
@@ -86,6 +86,13 @@
       "title": {
         "en": "Documentation agrees with the code",
         "ru": "Документация согласована с кодом"
+      }
+    },
+    {
+      "id": "cognitive-debt",
+      "title": {
+        "en": "A maintainer can recover the assumptions behind a change",
+        "ru": "Разработчик может выяснить, какие допущения важны для изменения"
       }
     }
   ]

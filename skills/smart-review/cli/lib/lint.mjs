@@ -8,22 +8,26 @@
 // START_MODULE_MAP
 //   lintRun - return { errors, warnings } for a run directory
 //   checkFile - check one recon, draft, or findings document on its own
+//   readExternalAssessment - import a bounded, local metadata document
+//   checkRunMetadata - verify the manifest, selection and external record provenance
 //   findSecrets - secret-shaped substrings in a text
 //   RULES - rule identifiers and their one-line meaning
 // END_MODULE_MAP
-import { existsSync, readFileSync, realpathSync } from 'node:fs';
+import { closeSync, constants, existsSync, fstatSync, openSync, readFileSync, readSync, realpathSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
-import { commitExists, git, isSafeRelPath, lineCountAtCommit, readJson, skillRoot } from './util.mjs';
+import { isDeepStrictEqual } from 'node:util';
+import { CliError, commitExists, git, isSafeRelPath, lineCountAtCommit, readJson, skillRoot } from './util.mjs';
 import { validate } from './validate.mjs';
 import { computeScore } from './score.mjs';
 import { loadRubric, TOPICS } from './rubrics.mjs';
-import { loadRun, validAttemptPath } from './run.mjs';
+import { loadRun, validAttemptPath, WEB_ASSESSMENT_TOPIC } from './run.mjs';
 
 export const RULES = {
   SCHEMA: 'document does not match its JSON Schema',
   'RUN-COMMIT': 'run commit does not exist in the reviewed repository',
   'RUN-SCOPE': 'reviewed, carried, stale, or requested topics disagree with the run scope',
   'CARRIED-SOURCE': 'carried findings differ from their original reviewed attempt or its metadata',
+  'EXTERNAL-SOURCE': 'external metadata must identify its original attempt at this commit',
   'SECTION-MISSING': 'a section listed in run.json has no findings document',
   'SECTION-UNKNOWN': 'findings document for a section that is not in run.json or has no rubric',
   'COMMIT-MISMATCH': 'findings commit differs from the run commit',
@@ -85,6 +89,11 @@ function checkEvidence(list, where, repo, commit, add) {
   }
 }
 
+function isCalendarDate(value) {
+  const date = new Date(value + 'T00:00:00Z');
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
 function validateFindings(doc, schema) {
   const violations = validate(doc, schema);
   if (violations.length) return violations;
@@ -93,6 +102,11 @@ function validateFindings(doc, schema) {
     const topics = finding.topics;
     if (topics && new Set(topics).size !== topics.length) {
       violations.push({ path: `$.findings[${i}].topics`, message: 'topic IDs must be unique' });
+    }
+  }
+  for (const [i, item] of doc.checked.entries()) {
+    if (item.asOf !== undefined && item.asOf !== 'unknown' && !isCalendarDate(item.asOf)) {
+      violations.push({ path: `$.checked[${i}].asOf`, message: 'must be a calendar date or unknown' });
     }
   }
   return violations;
@@ -107,6 +121,7 @@ function checkAttemptScope(run, add) {
     add('RUN-SCOPE', 'each included section must appear exactly once in reviewSections or carried');
   }
   for (const topic of run.topics || []) {
+    if (topic === WEB_ASSESSMENT_TOPIC) continue;
     if (!Object.hasOwn(TOPICS, topic) || !inspected.has(TOPICS[topic])) {
       add('RUN-SCOPE', `topic "${topic}" must belong to a reviewed section`);
     }
@@ -116,11 +131,109 @@ function checkAttemptScope(run, add) {
   }
 }
 
+function checkMetadata(metadata, schema, add) {
+  const definition = schema.$defs.assessmentMetadata;
+  if (validate(metadata, definition, schema).length ||
+      Object.keys(metadata).some(key => !Object.hasOwn(definition.properties, key))) {
+    add('SCHEMA', 'expected assessmentDate (YYYY-MM-DD), scope, and optional deploymentId, reference and documents');
+    return;
+  }
+  if (!isCalendarDate(metadata.assessmentDate)) {
+    add('SCHEMA', 'assessmentDate must be a calendar date');
+  }
+  if (metadata.documents?.length > 32) add('SCHEMA', 'at most 32 document names are allowed');
+  if (findSecrets(JSON.stringify(metadata)).length) add('SECRET', 'external metadata contains a secret-shaped value');
+}
+
+function readLocalMetadata(path) {
+  if (/^(?:[a-z][a-z0-9+.-]*:\/\/|[/\\]{2})/i.test(path)) throw new CliError('--external-assessment needs a local file');
+  let fd;
+  try {
+    fd = openSync(path, constants.O_RDONLY | constants.O_NONBLOCK);
+    const stat = fstatSync(fd);
+    if (!stat.isFile() || stat.size > 65536) throw new Error();
+    const bytes = Buffer.alloc(stat.size);
+    if (readSync(fd, bytes) !== bytes.length) throw new Error();
+    return JSON.parse(bytes.toString('utf8'));
+  } catch {
+    throw new CliError('--external-assessment needs a readable local JSON file of at most 64 KiB');
+  } finally {
+    if (fd !== undefined) closeSync(fd);
+  }
+}
+
+export function readExternalAssessment(path) {
+  const metadata = readLocalMetadata(path);
+  checkMetadata(metadata, readJson(join(skillRoot, 'schemas/run.schema.json')), (_, message) => { throw new CliError(message); });
+  return metadata;
+}
+
 // Paths below a canonical output root must identify the recorded artifact itself.
 function directPath(...parts) {
   const path = join(...parts);
   if (realpathSync(path) !== path) throw new Error(`artifact path redirects: ${path}`);
   return path;
+}
+
+export function checkRunMetadata({ dir, run }, add) {
+  const schema = readJson(join(skillRoot, 'schemas/run.schema.json'));
+  const violations = validate(run, schema);
+  for (const v of violations) {
+    add('SCHEMA', v.path.startsWith('$.externalAssessments') ? 'invalid external assessment fields in run.json' : 'run.json ' + v.path + ': ' + v.message);
+  }
+  if (violations.length) return;
+  const topic = WEB_ASSESSMENT_TOPIC;
+  const selected = run.topics?.includes(topic);
+  const external = run.externalAssessments?.[topic];
+  if (run.reviewSections) checkAttemptScope(run, add);
+  else if (run.topics || run.carried || run.stale || run.baseDir !== undefined) add('RUN-SCOPE', 'attempt scope requires reviewSections');
+  if (!selected && (!run.sections.length || run.reviewSections?.length === 0)) add('RUN-SCOPE', 'empty selection');
+  if (selected && (!external || run.profile !== 'custom')) add('RUN-SCOPE', 'web-pentest requires a custom selection and external status');
+  if (!external) {
+    if (existsSync(join(dir, 'external-assessment.json'))) add('EXTERNAL-SOURCE', 'unclaimed external metadata snapshot');
+    return;
+  }
+  if (!run.reviewSections || !run.topics || run.sections.includes(topic) ||
+      Object.keys(run.rubrics).some(id => !run.sections.includes(id)) || Object.hasOwn(run.stale || {}, topic) ||
+      (run.reviewSections?.length === 0 && run.sections.length)) {
+    add('RUN-SCOPE', 'external assessments must be separate from section results');
+  }
+  if (Object.keys(run.externalAssessments).length !== 1 ||
+      Object.keys(external).some(key => !Object.hasOwn(schema.properties.externalAssessments.properties[topic].properties, key)) ||
+      (external.status === 'metadata-supplied') !== Object.hasOwn(external, 'metadata')) {
+    add('SCHEMA', 'external assessment fields disagree with the recorded status');
+  }
+  if (external.metadata) checkMetadata(external.metadata, schema, add);
+  checkExternalSource(dir, run.repo.commit, selected, external, add);
+}
+
+function checkExternalSource(dir, commit, selected, external, add) {
+  const origin = external.sourceAttempt;
+  const outRoot = resolve(dir, '..', '..');
+  if (external.recordedAtCommit !== commit || !validAttemptPath(origin, commit) ||
+      Boolean(selected) !== (resolve(outRoot, origin) === dir)) {
+    add('EXTERNAL-SOURCE', 'the selection, recording commit and source attempt disagree');
+    return;
+  }
+  try {
+    const root = realpathSync(outRoot);
+    const sourceDir = directPath(root, origin);
+    if (!selected) {
+      const topic = WEB_ASSESSMENT_TOPIC;
+      if (existsSync(join(dir, 'external-assessment.json'))) throw new Error();
+      const index = readJson(directPath(root, 'index.json'));
+      if (!index.runs.some(entry => entry.commit === commit && entry.dir === origin && entry.externalAssessments?.[topic] === external.status)) throw new Error();
+      const source = readJson(directPath(sourceDir, 'run.json'));
+      if (source.repo.commit !== commit || !source.topics?.includes(topic) ||
+          !isDeepStrictEqual(source.externalAssessments?.[topic], external)) throw new Error();
+    }
+    const snapshot = join(sourceDir, 'external-assessment.json');
+    if (external.status === 'metadata-supplied') {
+      if (!isDeepStrictEqual(readLocalMetadata(directPath(snapshot)), external.metadata)) throw new Error();
+    } else if (existsSync(snapshot)) throw new Error();
+  } catch {
+    add('EXTERNAL-SOURCE', 'cannot verify external record against its source attempt');
+  }
 }
 
 function checkCarriedSources({ run, dir, docs }, add) {
@@ -149,6 +262,10 @@ function checkCarriedSources({ run, dir, docs }, add) {
       const source = readJson(directPath(sourceDir, 'run.json'));
       const reviewed = source.reviewSections ?? source.sections;
       const current = docs[id];
+      if (Array.isArray(current.doc.checked) && current.doc.checked.some(item => item && Object.hasOwn(item, 'asOf'))) {
+        add('CARRIED-SOURCE', `${id}: external evidence requires fresh inspection`);
+        continue;
+      }
       if (sourceDir === attemptDir || source.repo?.commit !== commit ||
           source.scoringVersion !== run.scoringVersion || current.doc.score?.scoringVersion !== run.scoringVersion ||
           !Array.isArray(reviewed) || !reviewed.includes(id)) {
@@ -182,8 +299,8 @@ export function lintRun({ runDir, repo, rubricsDir }) {
 
   // START_BLOCK_LINT_RUN
   const runAdd = mk('run');
-  const runViolations = validate(run, readJson(join(schemaDir, 'run.schema.json')));
-  for (const v of runViolations) runAdd('SCHEMA', `run.json ${v.path}: ${v.message}`);
+  checkRunMetadata({ dir, run }, runAdd);
+  if (errors.some(e => e.rule === 'SCHEMA')) return { errors, warnings };
   const commit = run.repo && run.repo.commit;
   if (!commit || !commitExists(root, commit)) {
     runAdd('RUN-COMMIT', `${commit} not found in ${root}`);
@@ -193,8 +310,7 @@ export function lintRun({ runDir, repo, rubricsDir }) {
   const head = git(root, ['rev-parse', 'HEAD']);
   if (head && head !== commit) mk('run', warnings)('HEAD-MOVED', `HEAD is ${head.slice(0, 12)}, the run reviewed ${commit.slice(0, 12)}`);
   for (const id of run.sections || []) if (!docs[id]) runAdd('SECTION-MISSING', `${id}.findings.json is absent`);
-  if (run.reviewSections !== undefined && !runViolations.length) {
-    checkAttemptScope(run, runAdd);
+  if (run.reviewSections !== undefined) {
     checkCarriedSources({ run, dir, docs }, runAdd);
   }
   const reconPath = join(dir, 'recon.json');

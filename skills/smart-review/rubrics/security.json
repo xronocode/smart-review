@@ -1,6 +1,6 @@
 {
   "id": "security",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "title": {
     "en": "Security",
     "ru": "Безопасность"
@@ -30,6 +30,13 @@
       "title": {
         "en": "Authorization and data isolation",
         "ru": "Авторизация и изоляция данных"
+      }
+    },
+    {
+      "id": "api-access",
+      "title": {
+        "en": "Public API behavior matches declared permissions",
+        "ru": "Поведение публичного API соответствует заявленным правам доступа"
       }
     },
     {

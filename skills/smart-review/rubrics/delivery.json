@@ -1,0 +1,43 @@
+{
+  "id": "delivery",
+  "version": "1.0.0",
+  "title": {
+    "en": "Delivery",
+    "ru": "Доставка изменений"
+  },
+  "question": {
+    "en": "What must pass before a change reaches users, which artifact reaches them, and how can a bad release be contained?",
+    "ru": "Какие проверки обязательны перед доставкой изменений пользователям, какой артефакт они получают и как ограничить последствия неудачного выпуска?"
+  },
+  "scale": 5,
+  "criteria": [
+    {
+      "id": "check-coverage",
+      "title": {
+        "en": "Checks run for the changes they cover",
+        "ru": "Проверки запускаются для тех изменений, которые они должны охватывать"
+      }
+    },
+    {
+      "id": "gate-enforcement",
+      "title": {
+        "en": "Required results and approvals control promotion",
+        "ru": "Переход на следующий этап зависит от обязательных проверок и согласований"
+      }
+    },
+    {
+      "id": "artifact-promotion",
+      "title": {
+        "en": "The published artifact matches the checked candidate",
+        "ru": "Публикуется тот артефакт, который прошёл проверку"
+      }
+    },
+    {
+      "id": "release-recovery",
+      "title": {
+        "en": "A failed release can be contained and recovered",
+        "ru": "Последствия неудачного выпуска можно ограничить, а работу — восстановить"
+      }
+    }
+  ]
+}

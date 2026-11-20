@@ -1,6 +1,6 @@
 ---
 id: ai-readiness
-version: 1.0.0
+version: 1.1.0
 ---
 
 # AI readiness section
@@ -13,7 +13,7 @@ Can a coding agent take a task in this repository from request to verified chang
 
 In scope: agent instruction files (`AGENTS.md`, `CLAUDE.md`, tool-specific rules), README and contributor documentation, architecture and decision records, plans and task tracking kept in the repository, scripts and commands that verify a change, repository layout, and environment setup files.
 
-Out of scope: which model or agent the team uses; code style; whether CI enforces the checks (not part of this version); guessing whether code was written by an agent.
+The delivery section owns enforcement of CI checks. Evaluate the repository guidance independently of model choice, code style or authorship.
 
 ## Method
 
@@ -25,7 +25,7 @@ Out of scope: which model or agent the team uses; code style; whether CI enforce
 
 - Cite the instruction line and, for contradictions, the code or configuration line that disagrees.
 - A missing file with a conventional name is not a finding. The finding is the missing *information*, wherever it should live.
-- A documented command counts as discoverable. Do not claim it passes unless you ran it under the test rubric's bounded-run rule.
+- A documented command establishes discoverability. For a claim about a previous run, cite an existing result with its producer, revision, date or run ID and suite scope, as specified in the tests rubric. Reviewers never execute target code.
 - Volume is not quality: a long instruction file that repeats generic advice scores lower than a short one with repository-specific facts.
 
 ## Severity anchors
@@ -69,6 +69,11 @@ Setup needs no production credentials, destructive commands are marked, secrets 
 
 ### `consistency` — Documentation agrees with the code
 No contradictions between instruction files, or between instructions and the repository. Score from the cross-check in step 3.
+
+### `cognitive-debt` — A maintainer can recover the assumptions behind a change
+On the task walked in step 2, identify an assumption needed to change behavior safely. For example, a writer may have to update two stores in a particular order because a reader assumes both contain the same revision. Cite the producer and consumer lines, the decision a contributor must make, and what happens if they miss it. Check types, names, tests, comments and decision records for a discoverable explanation or a check that enforces the rule. Record where the task led you and which relationship the contributor still has to reconstruct.
+
+A typed transition or a focused test can make the rule clear without a separate design document. The number of files visited alone proves little. Use `na` when there is no maintained change path, and `unknown` when the relevant contract is outside the available source. Keep missing navigation under `navigation`, absent completion criteria under `task-path`, and tangled local branches under hygiene's `complexity`. Use a single finding key when an existing documentation or code finding already accounts for the same repair.
 
 ## Optional tools
 

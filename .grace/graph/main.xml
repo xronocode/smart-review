@@ -1,7 +1,7 @@
 <GraceGraphDocument graceVersion="4.0">
   <GD-MAIN>
     <M-SECTION-CLI>
-      <Summary>Dependency-free Node CLI for commit-bound review attempts, topic selection, coverage-aware scoring, lint, comparison and publication of reports with same-commit section provenance.</Summary>
+      <Summary>Dependency-free Node CLI for a bilingual review catalogue, commit-bound attempts, external assessment metadata, coverage-aware scoring, lint and publication with section provenance.</Summary>
       <Path>skills/smart-review/cli/smart-review.mjs</Path>
       <Path>skills/smart-review/cli/lib/util.mjs</Path>
       <Path>skills/smart-review/cli/lib/validate.mjs</Path>
@@ -23,7 +23,7 @@
       <M-SECTION-RUBRICS />
     </M-SECTION-SKILL>
     <M-SECTION-RUBRICS>
-      <Summary>Rubrics of the scored sections: prose method and evidence rules per section, machine-readable criteria lists with versions, and run profiles.</Summary>
+      <Summary>Versioned methods, evidence standards and criteria for ten repository sections, including delivery, integrations, database queries, frontend and open-source readiness. Profiles specify which sections to consider.</Summary>
       <Path>skills/smart-review/rubrics/profiles.json</Path>
     </M-SECTION-RUBRICS>
     <M-SECTION-PLUGIN>
