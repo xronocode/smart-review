@@ -1,7 +1,22 @@
 # Scoring
 
-The score is computed by `smart-review score` from confirmed findings. The model never computes,
-estimates, or adjusts a score. This file documents scoring version `3`.
+`smart-review score` checks criterion coverage before computing deductions from confirmed
+findings. This file documents scoring version `4`.
+
+## Coverage
+
+Coverage is reported as **assessed / applicable**. Each `scored` criterion counts toward
+both numbers, including a criterion rated 0/5. An `unknown` criterion counts only toward
+applicable. A criterion marked `na` contributes to neither number.
+
+| Criteria in the section | Result |
+|---|---|
+| At least one `scored` | A numeric score and band. The report shows how much was assessed. |
+| Every criterion is `na` and at least one criterion is recorded | Not applicable (`not-applicable`). |
+| No `scored` criteria and at least one `unknown`, or no criteria recorded | Insufficient data (`insufficient-data`). |
+
+An unscored section stores its `reason` and sets `value` and `band` to `null`.
+Criterion ratings from 0 to 5 describe individual criteria. Only findings determine deductions.
 
 ## Formula
 
@@ -19,9 +34,8 @@ A finding is **counted** unless one of these holds:
 - its confidence is `low` (move it to `unconfirmed` or confirm it);
 - it is `low` or `medium` and listed in the repository's accepted-risks file.
 
-`high` and `critical` findings are always counted. An accepted-risks entry cannot remove them.
-
-Criteria scores (0–5) are diagnostic. They are shown in the report and never enter the formula.
+Accepted-risk entries apply only to low and medium severities. A confirmed finding tagged
+with several topics still contributes a single deduction.
 
 ## Bands
 
@@ -31,9 +45,20 @@ Criteria scores (0–5) are diagnostic. They are shown in the report and never e
 | 40–69 | fair | a counted high finding with no critical one, or medium and low findings together costing more than 30 points |
 | 0–39 | poor | a counted critical finding, or counted high findings numerous enough to sink the score below 40 |
 
-The overall score of a run is the rounded mean of the section scores, then capped: at 39 when any
-section that ran has a counted critical finding, otherwise at 69 when any section has a counted high
-finding. The report shows the mean, the cap, and the result as separate steps.
+The overall score starts with the rounded, unweighted mean of numeric section scores.
+Reviewed and compatible carried sections each count once. Unscored sections and stale
+results are excluded from the mean. Aggregate coverage sums the assessed and applicable
+criterion counts across the included review documents, including unscored sections.
+
+A counted critical finding in any included section caps the overall score at 39.
+Otherwise, a counted high finding caps it at 69. This includes severe findings in unscored
+sections. For example, an assessed section scoring 100 and an unassessed section with a
+confirmed high finding give a mean of 100 and an overall score of 69.
+
+With no numeric section scores, the overall score and band are both `null`. The report
+shows **Not applicable** only when every included section is explicitly inapplicable.
+An empty report or any other combination without a numeric score shows **Insufficient data**.
+A known severity cap remains visible even when there is no numeric score to cap.
 
 ## Why these numbers
 
@@ -61,13 +86,12 @@ the same. The report says so when they differ. A higher score on a later run can
 improved or that the later run found less; the per-finding comparison (`fixed`, `still present`,
 `new`, `missed earlier`, `not reproduced`) tells which.
 
-## Changing the formula
-
 ## Versions
 
 - `1` — initial weights and caps.
 - `2` — low findings together deduct at most 14.
 - `3` — medium findings together deduct at most 30; the overall score inherits the per-section caps (39 with a counted critical finding, 69 with a counted high finding).
+- `4` — numeric scores require at least one assessed criterion. Reports retain stored scores when displaying earlier scoring versions.
 
 Any change to weights, caps, bands, or counting rules bumps `SCORING_VERSION` in
 `cli/lib/score.mjs`, this file, and the tests in the same commit.

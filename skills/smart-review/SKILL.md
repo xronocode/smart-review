@@ -5,9 +5,11 @@ description: |
   sections. `changes` reviews a diff, branch, or pull request with the right
   subagent combination. `security`, `tests`, `dependencies`, `ai-readiness`,
   and `hygiene` review the whole repository at one commit: evidence-backed
-  findings, a separate verification pass, a deterministic 0-100 score per
-  section, and Markdown and HTML reports checked by a bundled CLI.
-  With no section named, every applicable section runs.
+  findings, a separate verification pass, a deterministic 0-100 score for each
+  section with assessed criteria, and Markdown and HTML reports checked by a bundled CLI.
+  Topics such as secrets, authentication, dead code, dependency vulnerabilities,
+  and dependency freshness select their full owner sections. With no section
+  or topic named, every applicable section runs by default.
   Use when: reviewing PRs, pre-commit checks, post-implementation cleanup,
   a health check before a release, onboarding to an unfamiliar codebase,
   tracking repository state over time.
@@ -45,7 +47,9 @@ section is added by adding a rubric; this file and the workflows do not change.
 
 Read the request, or the argument a command passed, in this order:
 
-1. **Sections named** (`security`, `tests,dependencies`, "check the dependencies") → exactly those.
+1. **Repository sections or topics named.** Pass explicit scored sections with `--sections`
+   and requested topics with `--topics`. Each topic selects its full owner section. Run each
+   section once, including when several topics share an owner.
 2. **A diff, branch, or pull request named** ("review this PR", "review my changes",
    "pre-commit check"), or a mode of the changes section (`standard`, `standard+errors`,
    `excellence`, `simplify`, `targeted`, `failure-hunt`, `project`) → `changes` only.
@@ -55,18 +59,38 @@ Read the request, or the argument a command passed, in this order:
    - `changes`, when there is something to review: `git status --porcelain` is not empty,
      or the current branch has commits that the default branch does not.
 
+Use the same topic IDs for English and Russian requests.
+
+| English request | Russian request | Topic ID | Section inspected |
+|---|---|---|---|
+| secrets, committed credentials | секреты, ключи в репозитории | `secrets` | `security` |
+| authentication | аутентификация | `authn` | `security` |
+| dead code, unused code | мёртвый код, неиспользуемый код | `dead-code` | `hygiene` |
+| dependency vulnerabilities | уязвимости зависимостей | `vulnerabilities` | `dependencies` |
+| outdated dependencies, dependency freshness | устаревшие зависимости, актуальность зависимостей | `freshness` | `dependencies` |
+
+“Check secrets and tests” and «Проверь секреты и тесты» both use
+`--topics secrets --sections tests`. “Check authentication and secrets” uses
+`--topics authn,secrets` and selects a single security inspection.
+
 Scored sections need a git repository with at least one commit and Node 22 or newer. If
 either is missing, say so, drop the scored sections, and run `changes` if it applies.
 
 ## Step 2 — Show the plan
 
-Before any section starts, print what will run and what it costs:
+For a repository review, use the scope returned by `start` in Step 2 of
+`workflows/repository.md`. Before inspection, show the requested topics, the sections to
+inspect, and the source of any carried sections. Identify stale results excluded from the
+report. Count inspectors and verifiers from `run.reviewSections`.
 
 ```
 Review plan
   Repository: <name> @ <commit-12> (<branch>)
-  Sections:   changes, security, tests, dependencies, ai-readiness, hygiene
-  Agents:     changes: 2-3 · repository: 1 recon + 5 inspectors + 5 verifiers
+  Topics:     <requested topics>
+  Inspect:    <reviewSections, plus changes if selected>
+  Carry:      <sections and their source attempts>
+  Exclude:    <stale sections and reasons>
+  Agents:     <counts for this plan>
   Output:     <run directory | chat only>
 ```
 
@@ -75,7 +99,7 @@ otherwise proceed.
 
 ## Step 3 — Run
 
-- **Scored sections:** follow `workflows/repository.md` once with the whole list. It maps
+- **Scored sections:** follow `workflows/repository.md` once with the sections and topics. It maps
   the repository, inspects, verifies, scores, lints, and writes the report.
 - **`changes`:** follow `workflows/changes.md`.
 

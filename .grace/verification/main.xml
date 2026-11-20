@@ -5,12 +5,17 @@
         <File>tests/cli/score.test.mjs</File>
         <File>tests/cli/lint.test.mjs</File>
         <File>tests/cli/report.test.mjs</File>
+        <File>tests/cli/rerun.test.mjs</File>
+        <File>tests/cli/coverage.test.mjs</File>
+        <File>tests/cli/topics.test.mjs</File>
       </TestFiles>
       <Command>make test</Command>
       <Scenario>The score follows the published weights and caps, ignores info and low-confidence findings, and is idempotent on disk.</Scenario>
       <Scenario>Lint accepts a valid run and rejects evidence missing on the commit, a line out of range, an edited score, a foreign commit, incomplete criteria, empty limits, an unverified finding, and a secret-shaped string.</Scenario>
       <Scenario>A finding of the previous run must be still present or explained; diff separates new findings from ones missed earlier.</Scenario>
       <Scenario>The HTML report is one file with no scripts or external resources and escapes finding text.</Scenario>
+      <Scenario>After a full review a selected topic and section refresh their owners, keep compatible results and publish only on successful verification. Stale or interrupted attempts cannot replace a completed review.</Scenario>
+      <Scenario>Unknown and inapplicable sections have explicit coverage and no numeric score; tagging one finding with multiple topics leaves its deduction unchanged.</Scenario>
       <TraceAssertion>node:test reports zero failing tests for tests/cli/*.test.mjs.</TraceAssertion>
     </V-M-SECTION-CLI>
     <V-M-SECTION-SKILL>
@@ -20,6 +25,7 @@
       <Command>make validate</Command>
       <Scenario>Every file the dispatcher names exists: SKILL.md, both workflows, the reviewer agents of the changes section, the recon, inspector, and verifier prompts, four reference documents, three schemas, and the CLI entry.</Scenario>
       <Scenario>The skill name in SKILL.md is smart-review, so installs made before the plugin upgrade in place.</Scenario>
+      <Scenario>The dispatcher resolves natural-language topics into the full owner sections and the workflow inspects only reviewSections, disclosing carried results.</Scenario>
       <Scenario>The scoring reference states the same formula, caps, and scoring version as the CLI.</Scenario>
       <TraceAssertion>make validate prints "Structure OK" and "Sections OK" and exits zero.</TraceAssertion>
     </V-M-SECTION-SKILL>

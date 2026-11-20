@@ -1,0 +1,11 @@
+<GraceChangeSpec graceVersion="4.0" status="applied">
+  <C-SELECTIVE-RERUNS>
+    <Summary>Reliable repeat reviews and explicit selection of five existing review topics.</Summary>
+    <Goals><Goal>Preserve completed reports, combine compatible results for the same commit and distinguish reviewed and carried sections.</Goal><Goal>Select secrets, authentication, dead code, dependency vulnerabilities and freshness through the skill and CLI.</Goal></Goals>
+    <Constraints><Constraint>Keep the five existing rubrics, offline CLI, evidence checks, stable finding keys and one deduction per finding. Read existing reports.</Constraint></Constraints>
+    <NonGoals><NonGoal>New audits, a graphical selector, active testing and remote publishing.</NonGoal></NonGoals>
+    <AcceptanceCriteria><Criterion>A full review followed by secrets and tests produces a complete report with provenance. A failed retry preserves the previous completed report.</Criterion><Criterion>Topics resolve to distinct parent sections and the plan discloses actual scope. Findings may name multiple topics without changing their deduction.</Criterion><Criterion>When no applicable criterion was assessed the report shows insufficient data or not applicable instead of a perfect score.</Criterion></AcceptanceCriteria>
+    <AffectedAreas><M-SECTION-CLI /><M-SECTION-SKILL /></AffectedAreas>
+    <VerificationIntent><ExpectedCommand>make validate</ExpectedCommand><ExpectedCommand>make test</ExpectedCommand><ExpectedEvidence>CLI fixtures cover failed and successful repeats, insufficient coverage, and topic selection.</ExpectedEvidence></VerificationIntent>
+  </C-SELECTIVE-RERUNS>
+</GraceChangeSpec>

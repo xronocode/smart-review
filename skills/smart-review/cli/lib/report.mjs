@@ -11,7 +11,7 @@
 //   renderHtml - self-contained HTML report with light and dark themes
 // END_MODULE_MAP
 import { labels } from './i18n.mjs';
-import { bandOf, WEIGHTS, MEDIUM_TOTAL_MAX, LOW_TOTAL_MAX, overallCap } from './score.mjs';
+import { bandOf, criterionCoverage, WEIGHTS, MEDIUM_TOTAL_MAX, LOW_TOTAL_MAX, overallCap } from './score.mjs';
 import { mean } from './util.mjs';
 
 const SEV_ORDER = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
@@ -25,16 +25,68 @@ export function buildSummary(run, docs) {
   const sections = {};
   for (const [id, { doc }] of Object.entries(docs)) {
     const counts = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
-    for (const f of doc.findings) counts[f.severity] += 1;
-    sections[id] = { score: doc.score ? doc.score.value : null, band: doc.score ? doc.score.band : null, rubricVersion: doc.rubricVersion, findings: counts, verdict: doc.verdict };
+    const findingTopics = {};
+    for (const f of doc.findings) {
+      counts[f.severity] += 1;
+      if (f.topics?.length) findingTopics[f.id] = f.topics;
+    }
+    // A legacy score is a published result. Its criteria can supply coverage without rescoring it.
+    const score = doc.score?.value ?? null;
+    const coverage = doc.score?.coverage ?? (Array.isArray(doc.criteria) ? criterionCoverage(doc.criteria) : null);
+    sections[id] = {
+      score, band: doc.score?.band ?? null, coverage,
+      status: score !== null ? 'scored' : doc.score?.reason ?? 'insufficient-data',
+      rubricVersion: doc.rubricVersion, findings: counts, findingTopics, verdict: doc.verdict,
+    };
   }
-  const values = Object.values(sections).map((a) => a.score).filter((v) => v !== null);
+  const results = Object.values(sections);
+  const values = results.map((a) => a.score).filter((v) => v !== null);
+  const coverage = results.every((a) => a.coverage) ? {
+    assessed: results.reduce((sum, a) => sum + a.coverage.assessed, 0),
+    applicable: results.reduce((sum, a) => sum + a.coverage.applicable, 0),
+  } : null;
   const overallRaw = mean(values);
   // The overall score inherits the per-section caps: a counted critical finding in any section
   // that ran keeps it at 39, otherwise a counted high finding keeps it at 69.
-  const overallCapValue = overallCap(Object.values(docs).map((d) => d.doc.score));
+  const legacyMean = ['1', '2'].includes(run.scoringVersion);
+  const overallCapValue = legacyMean ? null : overallCap(Object.values(docs).map((d) => d.doc.score));
   const overall = overallCapValue && overallRaw !== null && overallRaw > overallCapValue.value ? overallCapValue.value : overallRaw;
-  return { commit: run.repo.commit, branch: run.repo.branch, profile: run.profile, scoringVersion: run.scoringVersion, overall, overallRaw, overallCap: overallCapValue, band: overall === null ? null : bandOf(overall), sections };
+  const allNA = results.length > 0 && results.every((a) => a.status === 'not-applicable');
+  const overallStatus = overall !== null ? 'scored' : allNA ? 'not-applicable' : 'insufficient-data';
+  const carried = run.carried ?? {};
+  return {
+    commit: run.repo.commit, branch: run.repo.branch, profile: run.profile, scoringVersion: run.scoringVersion,
+    overall, overallRaw, overallCap: overallCapValue, band: bandOf(overall), overallStatus, coverage,
+    topics: run.topics ?? [], reviewed: Object.keys(sections).filter((id) => !Object.hasOwn(carried, id)),
+    carried, stale: run.stale ?? {}, sections,
+  };
+}
+
+function scoreLabel(value, status, L) {
+  return value == null ? L.scoreStatus[status] ?? L.scoreStatus['insufficient-data'] : `${value}/100`;
+}
+
+function coverageRatio(coverage) {
+  return coverage ? `${coverage.assessed}/${coverage.applicable}` : '—';
+}
+
+function reviewDetails(summary, L) {
+  const name = (id) => L.sectionNames[id] || id;
+  const lines = [];
+  if (summary.topics?.length) lines.push(`${L.requestedTopics}: ${summary.topics.join(', ')}`);
+  if (summary.reviewed?.length) lines.push(`${L.reviewed}: ${summary.reviewed.map(name).join(', ')}`);
+  for (const [id, origin] of Object.entries(summary.carried ?? {})) lines.push(`${name(id)} — ${L.carried}: ${origin}`);
+  for (const [id, reason] of Object.entries(summary.stale ?? {})) {
+    const explanation = Object.hasOwn(L.staleReasons, reason) ? `${L.staleReasons[reason]} (${reason})` : reason;
+    lines.push(`${L.stale}: ${name(id)} — ${explanation}`);
+  }
+  if (summary.coverage) lines.push(`${L.coverage}: ${coverageRatio(summary.coverage)}`);
+  return lines;
+}
+
+function meanLabel(summary, L) {
+  return Object.keys(summary.carried ?? {}).length || Object.values(summary.sections).some((s) => s.score === null)
+    ? L.scoredMean : L.meanOf;
 }
 
 function criterionTitle(rubric, id, lang) {
@@ -43,6 +95,7 @@ function criterionTitle(rubric, id, lang) {
 }
 
 function calcLines(score, L) {
+  if (score.value === null) return [`${L.result}: ${scoreLabel(null, score.reason, L)}`];
   const lines = [`${L.base}: ${score.base}`];
   for (const s of score.steps) lines.push(`${L.severity[s.severity]}: ${s.count} × ${s.weight}${s.limited ? ` (${L.atMost} ${s.limited})` : ''} = −${s.subtotal} → ${s.running}`);
   if (score.cap) lines.push(`${L.capped}: ${L.capReason[score.cap.reason]} ${score.cap.value}`);
@@ -51,9 +104,14 @@ function calcLines(score, L) {
 }
 
 function overallLines(summary, L) {
-  const lines = [`${L.meanOf}: ${summary.overallRaw ?? '—'}`];
+  if (summary.overall === null) {
+    const lines = [`${L.result}: ${scoreLabel(null, summary.overallStatus, L)}`];
+    if (summary.overallCap) lines.push(`${L.riskCap}: ${L.overallCapReason[summary.overallCap.reason]} ${summary.overallCap.value}`);
+    return lines;
+  }
+  const lines = [`${meanLabel(summary, L)}: ${summary.overallRaw}`];
   if (capBinds(summary)) lines.push(`${L.capped}: ${L.overallCapReason[summary.overallCap.reason]} ${summary.overallCap.value} → ${summary.overall}`);
-  lines.push(`${L.result}: ${summary.overall ?? '—'}/100`);
+  lines.push(`${L.result}: ${summary.overall}/100`);
   return lines;
 }
 
@@ -68,23 +126,25 @@ export function renderMarkdown({ run, docs, rubrics, summary, diff, lang }) {
   const name = (id) => L.sectionNames[id] || id;
   const o = [];
   o.push(`# ${L.title}: ${run.repo.name || ''}`.trim(), '');
-  o.push(`**${L.overall}: ${summary.overall ?? '—'}/100** (${summary.band ? L.band[summary.band] : '—'})`, '');
-  o.push(`- ${L.commit}: \`${run.repo.commit}\``, `- ${L.branch}: \`${run.repo.branch}\``, `- ${L.profile}: ${run.profile}`, `- ${L.date}: ${run.startedAt.slice(0, 10)}`, '');
+  o.push(`**${L.overall}: ${scoreLabel(summary.overall, summary.overallStatus, L)}**${summary.band ? ` (${L.band[summary.band]})` : ''}`, '');
+  o.push(`- ${L.commit}: \`${run.repo.commit}\``, `- ${L.branch}: \`${run.repo.branch}\``, `- ${L.profile}: ${run.profile}`, `- ${L.date}: ${run.startedAt.slice(0, 10)}`,
+    ...reviewDetails(summary, L).map((line) => `- ${markdownText(line)}`), '');
   o.push(`### ${L.overallCalc}`, '', ...overallLines(summary, L).map((l) => `- ${l}`), '');
   if (run.repo.dirty) o.push(`> ${L.dirty}`, '');
-  o.push(`| ${L.sections} | /100 | ${L.findings} |`, '|---|---|---|');
+  o.push(`| ${L.sections} | /100 | ${L.coverage} | ${L.findings} |`, '|---|---|---|---|');
   for (const [id, a] of Object.entries(summary.sections)) {
     const c = a.findings;
     const parts = ['critical', 'high', 'medium', 'low', 'info'].filter((s) => c[s]).map((s) => `${c[s]} ${L.severity[s].toLowerCase()}`);
-    o.push(`| ${name(id)} | ${a.score ?? '—'} | ${parts.join(', ') || '—'} |`);
+    o.push(`| ${name(id)} | ${a.score ?? scoreLabel(null, a.status, L)} | ${coverageRatio(a.coverage)} | ${parts.join(', ') || '—'} |`);
   }
   o.push('');
   for (const [id, { doc }] of Object.entries(docs)) {
-    o.push(`## ${name(id)} — ${doc.score ? doc.score.value : '—'}/100`, '', `**${doc.verdict}**`, '', doc.summary, '');
+    o.push(`## ${name(id)} — ${scoreLabel(doc.score?.value, doc.score?.reason, L)}`, '', `**${doc.verdict}**`, '', doc.summary, '');
     o.push(`### ${L.findings}`, '');
     if (!doc.findings.length) o.push(L.noFindings, '');
     for (const f of sorted(doc.findings)) {
       o.push(`#### ${f.id} · ${L.severity[f.severity]} · ${f.title}`, '');
+      if (f.topics?.length) o.push(`- **${L.findingTopics}:** ${f.topics.map(markdownText).join(', ')}`);
       o.push(`- **${L.what}:** ${f.what}`, `- **${L.impact}:** ${f.impact}`, `- **${L.fix}:** ${f.fix}`);
       if (f.affected.length) o.push(`- **${L.affected}:** ${f.affected.join(' · ')}`);
       o.push(`- **${L.evidence}:** ${f.evidence.map((e) => `\`${ev(e)}\``).join(', ')}`);
@@ -124,12 +184,13 @@ export function renderMarkdown({ run, docs, rubrics, summary, diff, lang }) {
 }
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const markdownText = (s) => esc(s).replace(/([\\`*_[\]|])/g, '\\$1').replace(/[\r\n]+/g, ' ');
 
 function ring(value, band, size = 120) {
+  if (value == null) return '';
   const r = size / 2 - 9;
   const c = 2 * Math.PI * r;
-  const v = value ?? 0;
-  return `<svg class="ring ${band || ''}" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="${v}/100"><circle class="track" cx="${size / 2}" cy="${size / 2}" r="${r}"/><circle class="arc" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-dasharray="${((c * v) / 100).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 ${size / 2} ${size / 2})"/><text x="50%" y="50%" dy=".35em" text-anchor="middle">${value ?? '—'}</text></svg>`;
+  return `<svg class="ring ${band || ''}" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="${value}/100"><circle class="track" cx="${size / 2}" cy="${size / 2}" r="${r}"/><circle class="arc" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-dasharray="${((c * value) / 100).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 ${size / 2} ${size / 2})"/><text x="50%" y="50%" dy=".35em" text-anchor="middle">${value}</text></svg>`;
 }
 
 const CSS = `:root{--bg:#f6f7f9;--card:#fff;--ink:#16181d;--mute:#5d6470;--line:#e2e5ea;--good:#1a8f4c;--fair:#b97a00;--poor:#c8322b;--critical:#8b1a16;--high:#c8322b;--medium:#b97a00;--low:#4b6a9b;--info:#6b7280;--chip:#eef0f4}
@@ -169,23 +230,31 @@ export function renderHtml({ run, docs, rubrics, summary, diff, lang }) {
   const name = (id) => L.sectionNames[id] || id;
   const h = [];
   h.push(`<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(L.title)}: ${esc(run.repo.name || '')}</title><style>${CSS}</style></head><body><main>`);
-  h.push(`<div class="hero">${ring(summary.overall, summary.band)}<div><h1>${esc(L.title)}: ${esc(run.repo.name || '')}</h1><div class="${summary.band || ''}"><b>${esc(L.overall)}: ${summary.overall ?? '—'}/100 · ${summary.band ? esc(L.band[summary.band]) : '—'}</b></div><div class="meta"><span>${esc(L.commit)} <code>${esc(run.repo.commit.slice(0, 12))}</code></span><span>${esc(L.branch)} <code>${esc(run.repo.branch)}</code></span><span>${esc(L.profile)}: ${esc(run.profile)}</span><span>${esc(run.startedAt.slice(0, 10))}</span></div></div></div>`);
-  h.push(`<table class="calc"><tr><td>${esc(L.meanOf)}</td><td></td><td>${summary.overallRaw ?? '—'}</td></tr>${capBinds(summary) ? `<tr><td>${esc(L.capped)}: ${esc(L.overallCapReason[summary.overallCap.reason])} ${summary.overallCap.value}</td><td></td><td>${summary.overall}</td></tr>` : ''}<tr class="total"><td>${esc(L.result)}</td><td></td><td>${summary.overall ?? '—'}/100</td></tr></table>`);
+  const overallLabel = scoreLabel(summary.overall, summary.overallStatus, L);
+  h.push(`<div class="hero">${ring(summary.overall, summary.band)}<div><h1>${esc(L.title)}: ${esc(run.repo.name || '')}</h1><div class="${summary.band || ''}"><b>${esc(L.overall)}: ${esc(overallLabel)}${summary.band ? ` · ${esc(L.band[summary.band])}` : ''}</b></div><div class="meta"><span>${esc(L.commit)} <code>${esc(run.repo.commit.slice(0, 12))}</code></span><span>${esc(L.branch)} <code>${esc(run.repo.branch)}</code></span><span>${esc(L.profile)}: ${esc(run.profile)}</span><span>${esc(run.startedAt.slice(0, 10))}</span></div></div></div>`);
+  const details = reviewDetails(summary, L);
+  if (details.length) h.push(`<ul>${details.map((line) => `<li>${esc(line)}</li>`).join('')}</ul>`);
+  if (summary.overall === null) {
+    h.push(...overallLines(summary, L).map((line) => `<p>${esc(line)}</p>`));
+  } else {
+    h.push(`<table class="calc"><tr><td>${esc(meanLabel(summary, L))}</td><td></td><td>${summary.overallRaw}</td></tr>${capBinds(summary) ? `<tr><td>${esc(L.capped)}: ${esc(L.overallCapReason[summary.overallCap.reason])} ${summary.overallCap.value}</td><td></td><td>${summary.overall}</td></tr>` : ''}<tr class="total"><td>${esc(L.result)}</td><td></td><td>${esc(overallLabel)}</td></tr></table>`);
+  }
   if (run.repo.dirty) h.push(`<p class="warn">${esc(L.dirty)}</p>`);
   h.push('<div class="grid">');
   for (const [id, a] of Object.entries(summary.sections)) {
     const n = Object.values(a.findings).reduce((x, y) => x + y, 0);
-    h.push(`<a class="tile" href="#${esc(id)}"><b class="${a.band || ''}">${a.score ?? '—'}</b>${esc(name(id))}<br><span>${esc(L.findings)}: ${n}</span></a>`);
+    h.push(`<a class="tile" href="#${esc(id)}"><b class="${a.band || ''}">${esc(a.score ?? scoreLabel(null, a.status, L))}</b>${esc(name(id))}<br><span>${esc(L.coverage)}: ${coverageRatio(a.coverage)}</span><br><span>${esc(L.findings)}: ${n}</span></a>`);
   }
   h.push('</div>');
   for (const [id, { doc }] of Object.entries(docs)) {
     const sc = doc.score;
-    h.push(`<section class="sec" id="${esc(id)}"><div class="ahead">${ring(sc ? sc.value : null, sc ? sc.band : '', 84)}<div><h2>${esc(name(id))}</h2><span class="note">${esc(L.rubric)} ${esc(doc.rubricVersion)}</span></div></div>`);
+    h.push(`<section class="sec" id="${esc(id)}"><div class="ahead">${ring(sc?.value, sc?.band, 84)}<div><h2>${esc(name(id))}${sc?.value == null ? ` — ${esc(scoreLabel(null, sc?.reason, L))}` : ''}</h2><span class="note">${esc(L.rubric)} ${esc(doc.rubricVersion)}</span></div></div>`);
     h.push(`<p class="verdict">${esc(doc.verdict)}</p><p>${esc(doc.summary)}</p>`);
     h.push(`<h3>${esc(L.findings)}</h3>`);
     if (!doc.findings.length) h.push(`<p class="note">${esc(L.noFindings)}</p>`);
     for (const f of sorted(doc.findings)) {
       h.push(`<details class="finding"><summary><span class="chip ${f.severity}">${esc(L.severity[f.severity])}</span><span>${esc(f.title)}</span><span class="fid">${esc(f.id)}</span></summary><dl>`);
+      if (f.topics?.length) h.push(`<dt>${esc(L.findingTopics)}</dt><dd>${f.topics.map(esc).join(', ')}</dd>`);
       h.push(`<dt>${esc(L.what)}</dt><dd>${esc(f.what)}</dd><dt>${esc(L.impact)}</dt><dd>${esc(f.impact)}</dd><dt>${esc(L.fix)}</dt><dd>${esc(f.fix)}</dd>`);
       if (f.affected.length) h.push(`<dt>${esc(L.affected)}</dt><dd>${f.affected.map(esc).join(' · ')}</dd>`);
       h.push(`<dt>${esc(L.evidence)}</dt><dd><ul class="ev">${f.evidence.map((e) => `<li><code>${esc(ev(e))}</code>${e.note ? ` ${esc(e.note)}` : ''}</li>`).join('')}</ul></dd>`);
@@ -193,13 +262,13 @@ export function renderHtml({ run, docs, rubrics, summary, diff, lang }) {
       h.push(`<dt>${esc(L.verification)}</dt><dd>${esc(L.vresult[f.verification.result])}, ${esc(L.confidence[f.confidence])}. ${esc(f.verification.note)}</dd></dl></details>`);
     }
     if (doc.unconfirmed.length) h.push(`<h3>${esc(L.unconfirmed)}</h3><ul>${doc.unconfirmed.map((u) => `<li><b>${esc(u.title)}.</b> ${esc(u.note)}</li>`).join('')}</ul>`);
-    if (sc) {
+    if (sc?.value != null) {
       h.push(`<h3>${esc(L.scoreCalc)}</h3><table class="calc"><tr><td>${esc(L.base)}</td><td></td><td>${sc.base}</td></tr>`);
       for (const s of sc.steps) h.push(`<tr><td><span class="chip ${s.severity}">${esc(L.severity[s.severity])}</span> ${s.count} × ${s.weight}${s.limited ? ` <span class="note">(${esc(L.atMost)} ${s.limited})</span>` : ''}</td><td>−${s.subtotal}</td><td>${s.running}</td></tr>`);
       if (sc.cap) h.push(`<tr><td>${esc(L.capped)}: ${esc(L.capReason[sc.cap.reason])} ${sc.cap.value}</td><td></td><td>${sc.cap.value}</td></tr>`);
       h.push(`<tr class="total"><td>${esc(L.result)}</td><td></td><td>${sc.value}/100</td></tr></table>`);
-      if (sc.notCounted.length) h.push(`<p class="note">${esc(L.notCounted)}: ${sc.notCounted.map((n) => `${esc(n.id)} (${esc(L.reason[n.reason])})`).join(', ')}</p>`);
     }
+    if (sc?.notCounted.length) h.push(`<p class="note">${esc(L.notCounted)}: ${sc.notCounted.map((n) => `${esc(n.id)} (${esc(L.reason[n.reason])})`).join(', ')}</p>`);
     const d = diff && diff.sections[id];
     if (d && d.items.length) {
       const delta = d.delta === null ? '' : ` (${d.delta > 0 ? '+' : ''}${d.delta})`;
@@ -220,6 +289,9 @@ export function renderHtml({ run, docs, rubrics, summary, diff, lang }) {
     h.push('</section>');
   }
   const w = WEIGHTS;
-  h.push(`<footer>${esc(L.footer)} smart-review ${esc(run.toolVersion)}, scoring v${esc(run.scoringVersion)}: −${w.critical}/−${w.high}/−${w.medium}/−${w.low} ${esc(L.points)}, ${esc(L.mediumTotal)} ${MEDIUM_TOTAL_MAX}, ${esc(L.lowTotal)} ${LOW_TOTAL_MAX}.</footer></main></body></html>\n`);
+  const formula = [`−${w.critical}/−${w.high}/−${w.medium}/−${w.low} ${L.points}`];
+  if (Number(run.scoringVersion) >= 3) formula.push(`${L.mediumTotal} ${MEDIUM_TOTAL_MAX}`);
+  if (Number(run.scoringVersion) >= 2) formula.push(`${L.lowTotal} ${LOW_TOTAL_MAX}`);
+  h.push(`<footer>${esc(L.footer)} smart-review ${esc(run.toolVersion)}, scoring v${esc(run.scoringVersion)}: ${esc(formula.join(', '))}.</footer></main></body></html>\n`);
   return h.join('\n');
 }

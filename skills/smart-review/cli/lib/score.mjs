@@ -1,12 +1,12 @@
 // START_MODULE_CONTRACT
-//   PURPOSE: Deterministic 0-100 score for one section, computed only from its findings.
+//   PURPOSE: Determine whether a section can be scored and compute its score from confirmed findings.
 //   SCOPE: Deductions by severity, caps, bands, and the overall mean. No model judgment, no IO.
 //   DEPENDS: none
 //   LINKS: M-SECTION-CLI, V-M-SECTION-CLI
 // END_MODULE_CONTRACT
 //
 // START_MODULE_MAP
-//   SCORING_VERSION - version of the weights and caps below
+//   SCORING_VERSION - version of the scoring and coverage rules below
 //   SEVERITIES - severity names from most to least severe
 //   WEIGHTS - points deducted per counted finding of each severity
 //   CAPS - highest score allowed with a critical or a high finding
@@ -14,11 +14,12 @@
 //   LOW_TOTAL_MAX - largest total deduction for low findings
 //   BANDS - score bands and their lower bounds
 //   bandOf - band name for a 0-100 value
+//   criterionCoverage - assessed and applicable criterion counts
 //   computeScore - score object for a findings document
 //   overallCap - the cap the overall score inherits from the sections that ran
 // END_MODULE_MAP
 
-export const SCORING_VERSION = '3';
+export const SCORING_VERSION = '4';
 export const SEVERITIES = ['critical', 'high', 'medium', 'low', 'info'];
 export const WEIGHTS = { critical: 40, high: 15, medium: 6, low: 2, info: 0 };
 export const CAPS = { critical: 39, high: 69 };
@@ -35,13 +36,19 @@ export const BANDS = [
 ];
 
 export function bandOf(value) {
-  return BANDS.find((b) => value >= b.min).name;
+  return value === null ? null : BANDS.find((b) => value >= b.min).name;
+}
+
+export function criterionCoverage(criteria) {
+  const assessed = criteria.filter((c) => c?.status === 'scored').length;
+  const unknown = criteria.filter((c) => c?.status === 'unknown').length;
+  return { assessed, applicable: assessed + unknown };
 }
 
 // START_CONTRACT: computeScore
 //   PURPOSE: Turn confirmed findings into a score with a step-by-step breakdown a reader can redo by hand.
 //   INPUTS: { doc: findings document, accepted?: Array<{section, key}> - accepted-risk entries }
-//   OUTPUTS: { score object: scoringVersion, base, steps, raw, cap, value, band, notCounted }
+//   OUTPUTS: { score object: scoringVersion, coverage, base, steps, raw, cap, value, band, notCounted, reason when unscored }
 //   SIDE_EFFECTS: none
 // END_CONTRACT: computeScore
 export function computeScore(doc, accepted = []) {
@@ -61,6 +68,16 @@ export function computeScore(doc, accepted = []) {
     }
   }
   // END_BLOCK_CLASSIFY_FINDINGS
+  const criteria = Array.isArray(doc.criteria) ? doc.criteria : [];
+  const coverage = criterionCoverage(criteria);
+  const severe = counts.critical ? 'critical' : counts.high ? 'high' : null;
+  const riskCap = severe ? { value: CAPS[severe], reason: severe } : null;
+  if (!coverage.assessed) {
+    const allNA = criteria.length > 0 && criteria.every((c) => c?.status === 'na');
+    const reason = allNA ? 'not-applicable' : 'insufficient-data';
+    return { scoringVersion: SCORING_VERSION, reason, coverage, base: null, steps: [], raw: null,
+      cap: riskCap, value: null, band: null, notCounted };
+  }
   const steps = [];
   let running = 100;
   for (const sev of ['critical', 'high', 'medium', 'low']) {
@@ -74,11 +91,9 @@ export function computeScore(doc, accepted = []) {
     steps.push(step);
   }
   const raw = Math.max(0, running);
-  let cap = null;
-  if (counts.critical && raw > CAPS.critical) cap = { value: CAPS.critical, reason: 'critical' };
-  else if (!counts.critical && counts.high && raw > CAPS.high) cap = { value: CAPS.high, reason: 'high' };
+  const cap = riskCap && raw > riskCap.value ? riskCap : null;
   const value = cap ? cap.value : raw;
-  return { scoringVersion: SCORING_VERSION, base: 100, steps, raw, cap, value, band: bandOf(value), notCounted };
+  return { scoringVersion: SCORING_VERSION, coverage, base: 100, steps, raw, cap, value, band: bandOf(value), notCounted };
 }
 
 // START_CONTRACT: overallCap
@@ -92,8 +107,8 @@ export function overallCap(scores) {
   for (const s of scores || []) {
     if (!s) continue;
     const counted = Object.fromEntries((s.steps || []).map((t) => [t.severity, t.count]));
-    if (counted.critical) return { value: CAPS.critical, reason: 'critical' };
-    if (counted.high) cap = { value: CAPS.high, reason: 'high' };
+    if (counted.critical || s.cap?.reason === 'critical') return { value: CAPS.critical, reason: 'critical' };
+    if (counted.high || s.cap?.reason === 'high') cap = { value: CAPS.high, reason: 'high' };
   }
   return cap;
 }

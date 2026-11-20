@@ -10,12 +10,13 @@
 //   OUT_DIR - default output directory inside the reviewed repository
 //   startRun - create the run directory and run.json, return run metadata and paths
 //   loadRun - read run.json and every findings document of a run directory
+//   validAttemptPath - recognize an output-relative attempt directory for a commit
 // END_MODULE_MAP
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve, basename } from 'node:path';
 import { CliError, TOOL_VERSION, git, readJson, writeJson } from './util.mjs';
 import { SCORING_VERSION } from './score.mjs';
-import { loadProfiles, loadRubric } from './rubrics.mjs';
+import { loadProfiles, loadRubric, TOPICS } from './rubrics.mjs';
 
 export const GUIDANCE_FILES = ['SMART_REVIEW.md'];
 export const OUT_DIR = '.smart-review';
@@ -51,20 +52,24 @@ function repoName(root) {
 //   PURPOSE: Pin a review run to the repository HEAD commit and record what will be reviewed.
 //   INPUTS: { repo: string, out?: string, profile?: string, sections?: string[], lang?: string, name?: string, rubricsDir?: string }
 //   OUTPUTS: { runDir: string, run: object, prior: string[] - sections whose earlier findings on this commit were kept }
-//   SIDE_EFFECTS: writes run.json; moves earlier findings of the same commit into prior/ and removes stale drafts and reports
+//   SIDE_EFFECTS: creates an isolated attempt and copies eligible results from the last published attempt
 // END_CONTRACT: startRun
-export function startRun({ repo, out, profile = 'full', sections, lang = 'en', name, rubricsDir }) {
+export function startRun({ repo, out, profile = 'full', sections, topics = [], lang = 'en', name, rubricsDir }) {
   const root = resolve(repo);
   const commit = git(root, ['rev-parse', 'HEAD']);
   if (!commit) throw new CliError(`${root} is not a git repository with at least one commit`);
   const branch = git(root, ['rev-parse', '--abbrev-ref', 'HEAD']) || 'HEAD';
   const dirty = (git(root, ['status', '--porcelain', '--untracked-files=no']) || '') !== '';
   let ids = sections;
-  if (!ids) {
+  if (!ids && !topics.length) {
     const profiles = loadProfiles(rubricsDir);
     ids = profiles[profile];
-    if (!ids) throw new CliError(`unknown profile "${profile}"; available: ${Object.keys(profiles).join(', ')}`);
+    if (!Object.hasOwn(profiles, profile)) throw new CliError(`unknown profile "${profile}"; available: ${Object.keys(profiles).join(', ')}`);
   }
+  for (const topic of topics) {
+    if (!Object.hasOwn(TOPICS, topic)) throw new CliError(`unknown topic "${topic}"; available: ${Object.keys(TOPICS).join(', ')}`);
+  }
+  ids = [...new Set([...(ids || []), ...topics.map(topic => TOPICS[topic])])];
   const rubrics = {};
   for (const id of ids) {
     const r = loadRubric(id, rubricsDir);
@@ -72,54 +77,86 @@ export function startRun({ repo, out, profile = 'full', sections, lang = 'en', n
     rubrics[id] = r.version;
   }
   const outRoot = resolve(out || join(root, OUT_DIR));
-  const runDir = join(outRoot, 'runs', commit.slice(0, 12));
   // START_BLOCK_FIND_PREVIOUS_RUN
   let previous = null;
+  let base = null;
+  let lastOther = null;
   const indexPath = join(outRoot, 'index.json');
   if (existsSync(indexPath)) {
     const idx = readJson(indexPath);
-    const prior = (idx.runs || []).filter((r) => r.commit !== commit && existsSync(join(outRoot, r.dir)));
-    if (prior.length) {
-      const last = prior[prior.length - 1];
-      previous = { commit: last.commit, dir: last.dir };
+    base = idx.runs.findLast(entry => entry.commit === commit) || null;
+    lastOther = idx.runs.findLast(entry => entry.commit !== commit && validAttemptPath(entry.dir, entry.commit) && existsSync(join(outRoot, entry.dir)));
+    if (lastOther) {
+      previous = { commit: lastOther.commit, dir: lastOther.dir };
     }
   }
   // END_BLOCK_FIND_PREVIOUS_RUN
   const guidanceFile = GUIDANCE_FILES.find((f) => git(root, ['cat-file', '-t', `${commit}:${f}`]) === 'blob') || null;
+  const runsDir = join(outRoot, 'runs');
+  mkdirSync(runsDir, { recursive: true });
+  const runDir = mkdtempSync(join(runsDir, `${commit.slice(0, 12)}-`));
+  const prior = [];
+  const carried = {};
+  const stale = {};
+  let reportSections = [...ids];
+  if (base) {
+    if (!validAttemptPath(base.dir, commit)) throw new CliError('invalid published attempt directory');
+    const source = loadRun(join(outRoot, base.dir));
+    if (source.run.repo.commit !== commit) throw new CliError('published attempt commit mismatch');
+    previous = source.run.previous;
+    Object.assign(stale, source.run.stale);
+    for (const [id, entry] of Object.entries(source.docs)) {
+      const rubric = loadRubric(id, rubricsDir);
+      if (!rubric) continue;
+      if (ids.includes(id)) {
+        mkdirSync(join(runDir, 'prior'), { recursive: true });
+        copyFileSync(entry.path, join(runDir, 'prior', `${id}.findings.json`));
+        prior.push(id);
+        continue;
+      }
+      if (entry.doc.commit !== commit || source.run.rubrics[id] !== rubric.version || entry.doc.rubricVersion !== rubric.version ||
+          entry.doc.score?.scoringVersion !== SCORING_VERSION || source.run.scoringVersion !== SCORING_VERSION) {
+        stale[id] = 'version';
+      } else if (entry.doc.lang !== lang) {
+        stale[id] = 'language';
+      } else if (id === 'dependencies' && entry.doc.tools.some(tool => tool.status === 'used' && /osv|audit/i.test(tool.name))) {
+        stale[id] = 'advisory-data';
+      } else {
+        rubrics[id] = rubric.version;
+        carried[id] = source.run.carried?.[id] || base.dir;
+        copyFileSync(entry.path, join(runDir, `${id}.findings.json`));
+      }
+    }
+    reportSections = [...new Set([...source.run.sections.filter(id => ids.includes(id) || Object.hasOwn(carried, id)), ...ids])];
+  } else if (lastOther) {
+    for (const id of Object.keys(lastOther.sections || {})) stale[id] = 'commit';
+  }
+  for (const id of reportSections) delete stale[id];
   const run = {
     schemaVersion: 1,
     toolVersion: TOOL_VERSION,
     scoringVersion: SCORING_VERSION,
     repo: { commit, branch, dirty, name: name || repoName(root) },
-    profile: sections ? 'custom' : profile,
+    profile: sections || topics.length ? 'custom' : profile,
     lang,
-    sections: ids,
+    sections: reportSections,
+    reviewSections: ids,
+    topics: [...new Set(topics)],
+    carried,
+    stale,
+    baseDir: base?.dir || null,
     rubrics,
     startedAt: new Date().toISOString(),
     previous,
     accepted: readAccepted(root, commit),
     guidanceFile,
   };
-  // START_BLOCK_KEEP_PRIOR_PASS
-  // Re-opening a run on the same commit keeps the earlier findings as the prior pass,
-  // so a second pass builds on the first instead of silently replacing it.
-  const prior = [];
-  if (existsSync(runDir)) {
-    const old = readdirSync(runDir).filter((n) => n.endsWith('.findings.json'));
-    if (old.length) {
-      rmSync(join(runDir, 'prior'), { recursive: true, force: true });
-      mkdirSync(join(runDir, 'prior'), { recursive: true });
-      for (const n of old) {
-        renameSync(join(runDir, n), join(runDir, 'prior', n));
-        prior.push(n.slice(0, -'.findings.json'.length));
-      }
-    }
-    for (const n of ['report.md', 'report.html', 'summary.json', 'diff.json']) rmSync(join(runDir, n), { force: true });
-    rmSync(join(runDir, 'drafts'), { recursive: true, force: true });
-  }
-  // END_BLOCK_KEEP_PRIOR_PASS
   writeJson(join(runDir, 'run.json'), run);
   return { runDir, outRoot, run, prior };
+}
+
+export function validAttemptPath(path, commit) {
+  return typeof commit === 'string' && typeof path === 'string' && /^runs\/[0-9a-f]{12}(?:-[a-zA-Z0-9]+)?$/.test(path) && path.slice(5, 17) === commit.slice(0, 12);
 }
 
 export function loadRun(runDir) {

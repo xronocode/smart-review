@@ -1,0 +1,13 @@
+<GraceChangePlan graceVersion="4.0" status="applied">
+  <C-SELECTIVE-RERUNS>
+    <IntentSummary>Implement the two approved release steps in sequence: reliable reruns with truthful scores, then selection of existing review topics.</IntentSummary>
+    <BaselineAssertions><MustExist><Value>M-SECTION-CLI</Value><Value>M-SECTION-SKILL</Value></MustExist><MustPassCommand><Command>make validate</Command><Command>make test</Command></MustPassCommand></BaselineAssertions>
+    <TargetAssertions><MustVerify><Module>M-SECTION-CLI</Module><Module>M-SECTION-SKILL</Module></MustVerify><MustPassCommand><Command>make test</Command><Command>make validate</Command></MustPassCommand></TargetAssertions>
+    <DurableScope><GraphAnchors><M-SECTION-CLI /><M-SECTION-SKILL /></GraphAnchors><VerificationAnchors><V-M-SECTION-CLI /><V-M-SECTION-SKILL /></VerificationAnchors></DurableScope>
+    <ObservedWriteScope><Glob>skills/smart-review/cli/**</Glob><Glob>skills/smart-review/schemas/**</Glob><Glob>skills/smart-review/reference/**</Glob><Glob>skills/smart-review/agents/**</Glob><File>skills/smart-review/workflows/repository.md</File><File>skills/smart-review/SKILL.md</File><Glob>tests/cli/**</Glob><File>README.md</File><File>README.ru.md</File><File>CHANGELOG.md</File></ObservedWriteScope>
+    <ImplementationPlan>
+      <T-001><Title>Keep completed attempts and report coverage</Title><DependsOn></DependsOn><AcceptanceCriteria><Criterion>Only successful finish publishes an attempt; carried results identify their origin. Interrupted repeats leave the completed report available. Unknown and inapplicable sections have no numeric value.</Criterion></AcceptanceCriteria><Verification><Command>make test</Command></Verification></T-001>
+      <T-002><Title>Expose the five topics through section routing and findings</Title><DependsOn>T-001</DependsOn><AcceptanceCriteria><Criterion>Secrets plus tests after full produces a complete report. Repeated topic selections route once to their owner, with requested topics and actual scope shown; reports retain one deduction per root cause.</Criterion></AcceptanceCriteria><Verification><Command>make validate</Command><Command>make test</Command></Verification></T-002>
+    </ImplementationPlan>
+  </C-SELECTIVE-RERUNS>
+</GraceChangePlan>
