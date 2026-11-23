@@ -1,6 +1,6 @@
 ---
 id: integrations
-version: 1.0.0
+version: 1.1.0
 ---
 
 # External integration reliability section
@@ -14,6 +14,8 @@ When an external service is slow, unavailable or only partly successful, what ha
 Inspect first-party callers and consumers at an independently operated service boundary, including provider APIs, callbacks, remote queues and SDK adapters. Integrations owns the handling of provider outcomes. UI presentation belongs to frontend, access policy to security, application query cost to database and release failures to delivery.
 
 ## Method
+
+For a locally hosted API that serves independently installed extensions, include an extension-initiated operation. Trace its success reply through any event or queue to the consumer that applies the operation. Check which target identity and completion signal the contract requires. A documented acceptance-only reply can legitimately precede completion. For a fallback, trace the primary and backup through to the resource they deliver and identify shared dependencies that survive the switch.
 
 1. From recon's surfaces, entry points and manifests, identify reachable provider operations and their owners. Trace one important read and one state-changing operation where present. Include one asynchronous completion path if the caller delegates the result to a webhook or worker. Record the operation, provider and count sampled.
 2. From the caller, follow the adapter into the configured client or worker. Read the effective deadline, cancellation handling and retry policy including outer job redelivery. Compare the combined wait and number of attempts with the caller's budget. If SDK defaults or platform settings are unavailable, identify the unresolved bound.

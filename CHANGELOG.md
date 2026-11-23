@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.3.0 — 2026-11-23
+
+- Full reviews inventory operations for all 21 internal catalogue choices at the reviewed commit. Reports list traced operations with evidence, explain gaps and identify coverage carried from earlier attempts.
+- The verifier independently selects a consequential path before reading the inspector's conclusions. Inspectors trace alternate implementations through to their observable outcomes.
+- The delivery, integrations and database rubrics now cover release gates, extension boundaries and file-backed queries. Repeat reviews distinguish fixes from newly discovered failures.
+
 ## v2.2.0 — 2026-11-20
 
 - List the 22 review choices with `smart-review catalog`. Labels are available in English and Russian. Select scored sections and topics together to inspect each owner once.

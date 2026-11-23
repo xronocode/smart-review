@@ -1,13 +1,13 @@
 {
   "id": "database",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "title": {
     "en": "Database query efficiency",
     "ru": "Эффективность запросов к базе данных"
   },
   "question": {
-    "en": "How does database work grow on the application's own data paths, and which costs can the available evidence establish?",
-    "ru": "Как растёт нагрузка на базу данных в операциях самого приложения и какие затраты подтверждают имеющиеся данные?"
+    "en": "How does storage work grow for the application's queries and batch operations, and which costs can the available evidence establish?",
+    "ru": "Как растёт объём работы хранилища при запросах и пакетных операциях приложения и какие затраты подтверждаются данными?"
   },
   "scale": 5,
   "criteria": [
@@ -21,8 +21,8 @@
     {
       "id": "round-trips",
       "title": {
-        "en": "Database trips scale with the intended batch",
-        "ru": "Число обращений к базе соответствует размеру обрабатываемых пакетов"
+        "en": "Storage calls scale with the intended batch",
+        "ru": "Число обращений к хранилищу соответствует размеру обрабатываемых пакетов"
       }
     },
     {

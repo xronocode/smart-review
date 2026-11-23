@@ -66,6 +66,8 @@ test('catalogue upgrade reports a transferred finding once and distinguishes fir
     cli('report', after, '--lang', lang);
     for (const format of ['md', 'html']) {
       const report = readFileSync(join(after, 'report.' + format), 'utf8');
+      const totals = lang === 'ru' ? 'Обнаружено при этой проверке (1) · Осталось (1)' : 'Observed in this review (1) · Still present (1)';
+      assert.ok(report.includes(earlier.slice(0, 12) + ': ' + totals), 'a transferred finding counts once alongside the previously unreviewed finding');
       for (const expected of [sectionLabel, countLabel + ': 2', countLabel + ': 0', 'security → dependencies', observed.title]) {
         assert.ok(report.includes(expected), format + ': ' + expected);
       }
@@ -91,6 +93,21 @@ test('rendering a saved diff preserves comparable history and suppresses obsolet
     assert.match(report, /Fixed/);
     assert.doesNotMatch(report, /Previously unreviewed/);
     if (format === 'html') assert.match(report, /94 → 100 \(\+6\)/);
+  }
+});
+
+test('historical diffs that omitted first inspections cannot establish an aggregate finding count', t => {
+  const dir = mkdtempSync(join(tmpdir(), 'diff-history-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  saveAttempt(dir, attempt(later, [findingsDoc('tests', later, [finding(1)])]));
+  write(join(dir, 'diff.json'), { previousCommit: earlier, commit: later, sections: {
+    tests: { scoreBefore: null, scoreAfter: 94, delta: null, comparable: false, items: [] },
+  } });
+  cli('report', dir);
+  for (const format of ['md', 'html']) {
+    const report = readFileSync(join(dir, 'report.' + format), 'utf8');
+    assert.match(report, /F-001/);
+    assert.doesNotMatch(report, /Findings in included sections compared with/);
   }
 });
 

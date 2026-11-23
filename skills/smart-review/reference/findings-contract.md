@@ -60,6 +60,13 @@ Rules that keep findings honest:
 - **Paths are repository-relative**, with forward slashes, exactly as `git ls-files` prints them.
 - **Never include a secret value.** Describe its kind and location.
 
+## Operation coverage
+
+Full reviews from version 2.3.0 reconcile `operationCoverage` with the section's rows
+in `recon.operationInventory`. Use the identities, dispositions and evidence rules in
+[source coverage](source-coverage.md). The same requirements apply to drafts and verified
+findings. These records describe the work performed and are independent of the score.
+
 ## Criteria
 
 One entry per criterion id of the rubric, no more, no fewer.

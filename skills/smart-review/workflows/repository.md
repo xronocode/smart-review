@@ -21,6 +21,7 @@ For direct Git reads, set `GIT_NO_LAZY_FETCH=1 GIT_ALLOW_PROTOCOL=''` so even a 
 - Find the skill directory (the directory that holds `SKILL.md`). The CLI is `node <skill-dir>/cli/smart-review.mjs`; see `reference/run-layout.md`.
 - Check `node --version` is 22 or newer and that the target is a git repository with a commit. If not, say so and stop.
 - Decide the repository (default: current directory) and the output directory (default: `<repo>/.smart-review`; use `--out` when the user named one or asked not to write into the repository).
+- For a follow-up, reuse the earlier report's output directory when it is known and the requested destination permits it. If the user supplied a second audit or a remediation plan, give the matching inspectors its finding IDs, scenarios and source revisions. They are leads to verify at the pinned commit. A separate output directory starts a separate publication history.
 - Decide the language: the user's language, `ru` or `en`.
 
 ## Step 2 — Start the run and show the plan
@@ -73,6 +74,13 @@ evidence for each selected rubric. For example, distinguish application queries 
 fixture SQL, a browser UI from generated assets, and external distribution from a private
 package manifest. An absent filename alone cannot establish non-applicability.
 
+For a full run, recon maps all 21 internal catalogue choices to a bounded inventory
+of operations using `reference/source-coverage.md`. Pass each owner its inventory.
+When fresh verifier contexts are unavailable, choose a second trace per owner during
+recon, before drafting findings. Record the chosen operation and a distinct branch or
+implementation to check in the corresponding recon surface note, or in recon limits
+if applicability is uncertain.
+
 ## Step 4 — Inspect
 
 For each section in `run.reviewSections`, launch `agents/inspector.md` with `section`, `repo`,
@@ -92,8 +100,14 @@ for verification. A section with zero assessed criteria has no numeric score.
 For each newly inspected section's draft, launch `agents/verifier.md` (parallel where possible; start a section's verifier as soon as its draft exists). It re-reads the code,
 refutes or confirms each finding, merges duplicates, and writes `<runDir>/<section>.findings.json`.
 
+For full reviews with a fresh verifier context, have the verifier choose and trace an operation from pinned source
+before reading the draft. If either reviewer identifies an omitted operation, route it
+through recon, then reconcile that owner's dispositions and recheck both documents.
+
 Without subagents, do the verification yourself as a distinct pass after all drafts exist:
-re-open every evidence location and try to refute each finding before keeping it.
+follow the trace reserved during recon, re-open every evidence location and try to refute
+each finding before keeping it. Record this same-agent verification in the section's
+limits and disclose it in the report summary.
 
 Never skip this step. A draft is not a result.
 
@@ -171,9 +185,11 @@ Identify which sections were inspected this time and which came from earlier att
 any stale exclusions. Show the recorded external status and supplied provenance separately
 from the source-review result. For an external-only request, report the status without a
 numeric score. Report insufficient data or non-applicability when the CLI returns that
-result for a section. When comparing overall scores, name any change in section coverage or rubric/scoring versions. Give the main limits in one or two lines. Do not paste the full report. Mention that
+result for a section. When comparing overall scores, name any change in section coverage or rubric/scoring versions. For a full review give the operation counts and name any consequential skipped path with its effect. Give the main limits in one or two lines. Do not paste the full report. Mention that
 `.smart-review/` now exists in the repository if you wrote there, and whether it is ignored
 by git; do not change `.gitignore` yourself.
+
+When the user asks why a repeat or external audit is still red, identify the output directory used for Smart Review history and the reviewed commit of each external section. Match a previous finding by its failing behavior, carrying its source ID and revision. Show which old items were verified fixed on the target, which persist, which were explicitly deferred, and which could not be checked. Classify a newly reported problem as introduced or missed earlier only after checking the older tree. Distinguish merged fixes from changes present only in a PR, and record when a promised runtime check is outstanding. State the denominator if only a sample was reconciled. Use historical attempts from other output directories as attributed evidence, preserving each publication. For different scores on identical source, identify the differing findings, coverage or external inputs. Quote the CLI's raw score and binding cap separately from closure progress.
 
 ## Non-interactive mode
 

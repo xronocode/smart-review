@@ -20,6 +20,7 @@
     "frameworks": { "type": "array", "items": { "type": "string" } },
     "manifests": { "type": "array", "items": { "$ref": "#/$defs/pathNote" } },
     "entryPoints": { "type": "array", "items": { "$ref": "#/$defs/pathNote" } },
+    "operationInventory": { "type": "array", "items": { "$ref": "#/$defs/operation" } },
     "surfaces": {
       "type": "array",
       "items": {
@@ -61,6 +62,16 @@
     "limits": { "type": "array", "items": { "type": "string" } }
   },
   "$defs": {
+    "operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["topic", "key", "operation"],
+      "properties": {
+        "topic": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "key": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+        "operation": { "type": "string", "minLength": 1, "pattern": "\\S" }
+      }
+    },
     "pathNote": {
       "type": "object",
       "additionalProperties": false,

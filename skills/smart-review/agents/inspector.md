@@ -53,6 +53,15 @@ checkable.
 - Mask secrets.
 - Depth before breadth: fewer findings that are traced end to end beat a long list of guesses. Cover the recon surfaces relevant to your rubric; say in `checked` what you covered and in `limits` what you did not.
 
+## Operation coverage
+
+For a full review, read `reference/source-coverage.md` and account for each of your owner's
+inventory rows in `operationCoverage`. Follow the caller through to the effect promised to
+the user. Compare independently implemented paths, including failure and recovery where
+they exist. Explain any untraced operation and what remains unknown. If the source reveals
+a missing family, tell the orchestrator its topic, stable key and operation so recon can
+extend the inventory before you check the draft.
+
 ## Work
 
 1. Use recon to find the paths relevant to your rubric. Verify applicability against the

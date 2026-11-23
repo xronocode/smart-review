@@ -7,6 +7,7 @@
 //
 // START_MODULE_MAP
 //   lintRun - return { errors, warnings } for a run directory
+//   checkReportOperations - reconcile source operation dispositions against the scoped recon inventory
 //   checkFile - check one recon, draft, or findings document on its own
 //   readExternalAssessment - import a bounded, local metadata document
 //   checkRunMetadata - verify the manifest, selection and external record provenance
@@ -14,12 +15,12 @@
 //   RULES - rule identifiers and their one-line meaning
 // END_MODULE_MAP
 import { closeSync, constants, existsSync, fstatSync, openSync, readFileSync, readSync, realpathSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { basename, dirname, join, relative, resolve } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { CliError, commitExists, git, isSafeRelPath, lineCountAtCommit, readJson, skillRoot } from './util.mjs';
 import { validate } from './validate.mjs';
 import { computeScore } from './score.mjs';
-import { loadRubric, TOPICS } from './rubrics.mjs';
+import { loadRubric, reviewCatalog, TOPICS } from './rubrics.mjs';
 import { loadRun, validAttemptPath, WEB_ASSESSMENT_TOPIC } from './run.mjs';
 
 export const RULES = {
@@ -28,6 +29,8 @@ export const RULES = {
   'RUN-SCOPE': 'reviewed, carried, stale, or requested topics disagree with the run scope',
   'CARRIED-SOURCE': 'carried findings differ from their original reviewed attempt or its metadata',
   'EXTERNAL-SOURCE': 'external metadata must identify its original attempt at this commit',
+  'OPERATION-INVENTORY': 'recon must map distinct operations under the internal catalogue topics in scope',
+  'OPERATION-COVERAGE': 'each mapped operation needs exactly one disposition from the owning section',
   'SECTION-MISSING': 'a section listed in run.json has no findings document',
   'SECTION-UNKNOWN': 'findings document for a section that is not in run.json or has no rubric',
   'COMMIT-MISMATCH': 'findings commit differs from the run commit',
@@ -77,15 +80,135 @@ function checkEvidence(list, where, repo, commit, add) {
       add('EVIDENCE-PATH', `${at}: "${e.path}"`);
       continue;
     }
+    const last = e.endLine ?? e.line;
+    if (last < e.line) {
+      add('EVIDENCE-LINE', `${at}: endLine precedes line`);
+      continue;
+    }
+    // Standalone report rendering can check the range shape without a repository.
+    if (!repo) continue;
     const lines = lineCountAtCommit(repo, commit, e.path);
     if (lines === null) {
       add('EVIDENCE-MISSING', `${at}: ${e.path} is not a file at ${commit.slice(0, 12)}`);
       continue;
     }
-    const last = e.endLine ?? e.line;
-    if (e.line > lines || last > lines || last < e.line) {
+    if (last > lines) {
       add('EVIDENCE-LINE', `${at}: ${e.path}:${e.line}${e.endLine ? `-${e.endLine}` : ''} but the file has ${lines} line(s)`);
     }
+  }
+}
+
+const operationOwners = new Map(reviewCatalog().filter(choice => choice.owner)
+  .map(choice => [choice.id, choice.owner]));
+
+function requiresOperationInventory(run) {
+  if (run?.profile !== 'full') return false;
+  const version = /^(\d+)\.(\d+)\.(\d+)$/.exec(run.toolVersion);
+  // Only an identifiable historic release qualifies for the legacy exception.
+  return !version || Number(version[1]) > 2 || (Number(version[1]) === 2 && Number(version[2]) >= 3);
+}
+
+function readRecon(dir) {
+  const path = join(dir, 'recon.json');
+  return existsSync(path) ? readJson(path) : undefined;
+}
+
+function operationId(row) {
+  return JSON.stringify([row.topic, row.key]);
+}
+
+function checkInventory(recon, run, add) {
+  const expected = new Map();
+  const full = requiresOperationInventory(run);
+  if (recon !== undefined) {
+    const schema = readJson(join(skillRoot, 'schemas/recon.schema.json'));
+    const problems = validate(recon, schema);
+    for (const p of problems) add('SCHEMA', `recon.json ${p.path}: ${p.message}`);
+    if (problems.length) return expected;
+  }
+  if (!recon?.operationInventory) {
+    if (full) add('OPERATION-INVENTORY', 'full reviews require recon.json with operationInventory');
+    return expected;
+  }
+  const topics = new Set();
+  const reviewed = run?.reviewSections ?? run?.sections;
+  for (const row of recon.operationInventory) {
+    const owner = operationOwners.get(row.topic);
+    if (!owner || (run && !(reviewed?.includes(owner) && run.sections?.includes(owner)))) {
+      add('OPERATION-INVENTORY', `${row.topic}: expected an internal topic owned by a reviewed section`);
+      continue;
+    }
+    const id = operationId(row);
+    if (expected.has(id)) add('OPERATION-INVENTORY', `${row.topic}/${row.key}: duplicate inventory item`);
+    expected.set(id, row);
+    topics.add(row.topic);
+  }
+  if (full) {
+    for (const topic of operationOwners.keys()) {
+      if (!topics.has(topic)) add('OPERATION-INVENTORY', `${topic}: no operation, absence or gap mapped in recon.json`);
+    }
+  }
+  return expected;
+}
+
+// Selective attempts copy carried dispositions byte-for-byte from their original
+// review; only freshly reviewed sections use the current attempt's inventory.
+function expectedForSection(inventory, run, section) {
+  if (!requiresOperationInventory(run) && Object.hasOwn(run?.carried || {}, section)) return null;
+  return inventory;
+}
+
+function checkDispositions(doc, section, expected, evidenceRepo, commit, add) {
+  const covered = new Set();
+  for (const [i, row] of (doc.operationCoverage || []).entries()) {
+    const id = operationId(row);
+    const name = `${row.topic}/${row.key}`;
+    if (covered.has(id)) add('OPERATION-COVERAGE', `${name}: duplicate disposition`);
+    covered.add(id);
+    if (operationOwners.get(row.topic) !== section) add('OPERATION-COVERAGE', `${name}: topic does not belong to ${section}`);
+    if (expected && expected.get(id)?.operation !== row.operation) {
+      add('OPERATION-COVERAGE', `${name}: topic, key and operation must match recon.json`);
+    }
+    if (row.status !== 'skipped' && !row.evidence?.length) {
+      add('OPERATION-COVERAGE', `${name}: ${row.status} requires pinned evidence`);
+    }
+    checkEvidence(row.evidence, `operationCoverage[${i}] ${name}`, evidenceRepo, commit, add);
+  }
+  for (const [id, row] of expected || []) {
+    if (operationOwners.get(row.topic) === section && !covered.has(id)) {
+      add('OPERATION-COVERAGE', `${row.topic}/${row.key}: missing disposition`);
+    }
+  }
+}
+
+function loadRunInventory(dir, run, add) {
+  const recon = readRecon(dir);
+  const expected = checkInventory(recon, run, add);
+  if (typeof recon?.commit === 'string' && recon.commit !== run.repo?.commit) {
+    add('COMMIT-MISMATCH', `recon.json is for ${recon.commit.slice(0, 12)}`);
+  }
+  return expected;
+}
+
+// START_CONTRACT: checkReportOperations
+//   PURPOSE: Reconcile the operation inventory and dispositions before rendering a saved run.
+//   INPUTS: { dir, run, docs }, add(rule, message, section?) - run directory, manifest, loaded documents and issue sink.
+//   OUTPUTS: Emits structural issues through add. Publication verifies evidence against Git in lintRun.
+//   SIDE_EFFECTS: reads recon, the shipped disposition schema and the original carried findings.
+// END_CONTRACT: checkReportOperations
+export function checkReportOperations({ dir, run, docs }, add) {
+  checkCarriedSources({ dir, run, docs }, add);
+  const expected = loadRunInventory(dir, run, add);
+  const schema = readJson(join(skillRoot, 'schemas/findings.schema.json'));
+  for (const [id, { doc }] of Object.entries(docs)) {
+    if (doc.operationCoverage !== undefined) {
+      const problems = validate(doc.operationCoverage, schema.properties.operationCoverage, schema, '$.operationCoverage');
+      for (const p of problems) add('SCHEMA', `${p.path}: ${p.message}`, id);
+      if (problems.length) continue;
+      if (doc.commit !== run.repo?.commit) add('COMMIT-MISMATCH', 'operation coverage is for another commit', id);
+    }
+    checkDispositions(doc, id, expectedForSection(expected, run, id), null, run.repo?.commit,
+      (rule, message) => add(rule, message, id));
   }
 }
 
@@ -251,6 +374,7 @@ function checkCarriedSources({ run, dir, docs }, add) {
     add('CARRIED-SOURCE', `cannot verify published attempts: ${e.message}`);
     return;
   }
+  const inventories = new Map();
   for (const [id, origin] of carried) {
     if (!validAttemptPath(origin, commit) || !published.has(origin) || !/^[a-z][a-z0-9-]*$/.test(id)) {
       add('CARRIED-SOURCE', `${id}: expected a published source attempt for this commit, got "${origin}"`);
@@ -276,7 +400,15 @@ function checkCarriedSources({ run, dir, docs }, add) {
       const original = readFileSync(directPath(sourceDir, filename));
       if (!original.equals(readFileSync(directPath(attemptDir, filename)))) {
         add('CARRIED-SOURCE', `${id}: findings differ from ${origin}/${id}.findings.json`);
+        continue;
       }
+      // A matching copy can still be incomplete if its original was edited after publication.
+      const invalidOrigin = (rule, message) => { throw new Error(`${rule}: ${message}`); };
+      if (!inventories.has(origin)) {
+        if (existsSync(join(sourceDir, 'recon.json'))) directPath(sourceDir, 'recon.json');
+        inventories.set(origin, loadRunInventory(sourceDir, source, invalidOrigin));
+      }
+      checkDispositions(current.doc, id, inventories.get(origin), null, commit, invalidOrigin);
     } catch (e) {
       add('CARRIED-SOURCE', `${id}: cannot verify ${origin}: ${e.message}`);
     }
@@ -313,12 +445,7 @@ export function lintRun({ runDir, repo, rubricsDir }) {
   if (run.reviewSections !== undefined) {
     checkCarriedSources({ run, dir, docs }, runAdd);
   }
-  const reconPath = join(dir, 'recon.json');
-  if (existsSync(reconPath)) {
-    const recon = readJson(reconPath);
-    for (const v of validate(recon, readJson(join(schemaDir, 'recon.schema.json')))) runAdd('SCHEMA', `recon.json ${v.path}: ${v.message}`);
-    if (recon.commit && recon.commit !== commit) runAdd('COMMIT-MISMATCH', `recon.json is for ${recon.commit.slice(0, 12)}`);
-  }
+  const expectedOperations = loadRunInventory(dir, run, runAdd);
   // END_BLOCK_LINT_RUN
 
   const findingsSchema = readJson(join(schemaDir, 'findings.schema.json'));
@@ -342,6 +469,7 @@ export function lintRun({ runDir, repo, rubricsDir }) {
     if (doc.rubricVersion !== rubric.version || run.rubrics[id] !== rubric.version) {
       add('RUBRIC-VERSION', `document ${doc.rubricVersion}, run ${run.rubrics[id]}, shipped ${rubric.version}`);
     }
+    checkDispositions(doc, id, expectedForSection(expectedOperations, run, id), root, commit, add);
     // END_BLOCK_LINT_IDENTITY
     // START_BLOCK_LINT_CRITERIA
     const seen = new Map();
@@ -415,14 +543,21 @@ export function checkFile({ file, repo, rubricsDir }) {
   const root = resolve(repo);
   const doc = readJson(file);
   const schemaDir = join(skillRoot, 'schemas');
-  const base = file.split(/[\\/]/).pop();
+  const base = basename(file);
+  const draft = base.endsWith('.draft.json');
+  const parent = dirname(resolve(file));
+  const dir = draft && basename(parent) === 'drafts' ? dirname(parent) : parent;
+  const manifest = join(dir, 'run.json');
+  const run = existsSync(manifest) ? readJson(manifest) : null;
   const add = (rule, message) => errors.push({ rule, section: base, message });
   if (base === 'recon.json') {
-    for (const v of validate(doc, readJson(join(schemaDir, 'recon.schema.json')))) add('SCHEMA', `${v.path}: ${v.message}`);
-    if (typeof doc.commit === 'string' && !commitExists(root, doc.commit)) add('RUN-COMMIT', `${doc.commit} not found in ${root}`);
+    checkInventory(doc, run, add);
+    if (typeof doc?.commit === 'string') {
+      if (!commitExists(root, doc.commit)) add('RUN-COMMIT', `${doc.commit} not found in ${root}`);
+      else if (run && doc.commit !== run.repo?.commit) add('COMMIT-MISMATCH', `recon.json is for ${doc.commit.slice(0, 12)}`);
+    }
     return { kind: 'recon', errors };
   }
-  const draft = base.endsWith('.draft.json');
   const schema = readJson(join(schemaDir, 'findings.schema.json'));
   if (draft) schema.$defs.finding.required = schema.$defs.finding.required.filter((k) => k !== 'verification');
   const violations = validateFindings(doc, schema);
@@ -433,6 +568,16 @@ export function checkFile({ file, repo, rubricsDir }) {
     add('RUN-COMMIT', `${doc.commit} not found in ${root}`);
     return { kind: draft ? 'draft' : 'findings', errors };
   }
+  if (run && doc.commit !== run.repo?.commit) add('COMMIT-MISMATCH', `${base} is for ${doc.commit.slice(0, 12)}`);
+  const suffix = draft ? '.draft.json' : '.findings.json';
+  if (run && base.endsWith(suffix) && base !== doc.section + suffix) {
+    add('SECTION-UNKNOWN', `${base} declares section "${doc.section}"`);
+  }
+  const expected = run ? loadRunInventory(dir, run, add) : null;
+  if (!draft && Object.hasOwn(run?.carried || {}, doc.section)) {
+    checkCarriedSources({ dir, run, docs: { [doc.section]: { doc } } }, add);
+  }
+  checkDispositions(doc, doc.section, expectedForSection(expected, run, doc.section), root, run?.repo?.commit ?? doc.commit, add);
   const rubric = loadRubric(doc.section, rubricsDir);
   if (!rubric) add('SECTION-UNKNOWN', `no shipped rubric "${doc.section}"`);
   else {

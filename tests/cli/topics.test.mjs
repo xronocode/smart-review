@@ -7,7 +7,7 @@ import { TOPICS } from '../../skills/smart-review/cli/lib/rubrics.mjs';
 import { startRun } from '../../skills/smart-review/cli/lib/run.mjs';
 import { computeScore } from '../../skills/smart-review/cli/lib/score.mjs';
 import { main } from '../../skills/smart-review/cli/smart-review.mjs';
-import { finding, findingsDoc, makeRepo, read, rubric, SKILL, write } from './helpers.mjs';
+import { finding, findingsDoc, fullReviewCoverage, makeRepo, read, rubric, SKILL, write } from './helpers.mjs';
 
 function fixture(t) {
   const repo = makeRepo();
@@ -144,7 +144,11 @@ test('new attempt scope partitions the report and reviews every requested topic 
 function mixedRerun(t) {
   const { repo, commit } = fixture(t);
   const first = startRun({ repo, profile: 'full' });
-  for (const id of first.run.sections) write(join(first.runDir, `${id}.findings.json`), findingsDoc(id, commit, []));
+  const { recon, coverage } = fullReviewCoverage(commit);
+  write(join(first.runDir, 'recon.json'), recon);
+  for (const id of first.run.sections) {
+    write(join(first.runDir, `${id}.findings.json`), findingsDoc(id, commit, [], { operationCoverage: coverage[id] }));
+  }
   const output = [];
   const print = line => output.push(line);
   assert.equal(main(['finish', first.runDir, '--repo', repo], print), 0, output.join('\n'));

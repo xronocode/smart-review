@@ -1,19 +1,21 @@
 ---
 id: database
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Database query efficiency section
 
 ## Question
 
-How does database work grow on the application's own data paths, and which costs can the available evidence establish?
+How does storage work grow for the application's queries and batch operations, and which costs can the available evidence establish?
 
 ## Scope
 
 Review queries this project issues or defines for a reachable application, worker or library operation. Include ORM-generated queries when their shape is supported by the mapping, and stored queries invoked on that path. Database owns query shape, repeated access and result volume. Access control and injection belong to security. A remote API call with no project-owned query belongs to integrations.
 
 ## Method
+
+Include project-owned queries over file-backed collections and key/value stores when a caller selects, filters or batches persisted records. Trace the caller's requested fields or search mode through IPC to the storage operation. A name-only listing that opens every file body and a batched save followed by one whole-store write per item are concrete growth mechanisms. Count calls or bytes justified by code. Ordinary one-file reads and IPC transport by themselves do not establish a query surface.
 
 1. Use recon's entry points, storage surfaces and exclusions to find the code that chooses the query. Select up to three distinct operations, favoring a list or search, a relationship traversal, and a batch job or bulk update where present. Record the caller, query builder or SQL, relevant schema revision and the reason for the sample. Trace views, scopes and eager-loading helpers called from those operations.
 2. For each operation name the unit of input and the unit returned. Follow filters, projections, ordering, limits and cursor or offset from the caller to the database. Determine whether a page bounds database work, network transfer or only the final response. Count separately any total-count query. Check whether a join multiplies rows before pagination or hydration.
@@ -38,8 +40,8 @@ Review queries this project issues or defines for a reachable application, worke
 ### `result-bounds` — Selection and pagination bound the work requested
 Compare the rows and fields needed with those selected, transferred and materialized. For pagination inspect filter placement, stable ordering and what the next page must skip or reread.
 
-### `round-trips` — Database trips scale with the intended batch
-Count list lookups, lazy loads and per-item mutations on one invocation. Trace batching to the database call and check the largest allowed input against the actual chunking rule.
+### `round-trips` — Storage calls scale with the intended batch
+Count list lookups, lazy loads and per-item mutations on one invocation. Follow each batch to the underlying store, including subsequent per-item writes. Compare the largest allowed input with the actual chunking rule.
 
 ### `access-path` — Predicates and ordering fit the declared access paths
 Pair the real filter, join and sort keys with schema evidence. Identify what can be pruned or fetched by key and which step still needs work proportional to the candidate set.

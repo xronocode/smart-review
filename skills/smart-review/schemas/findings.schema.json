@@ -13,6 +13,7 @@
     "verdict": { "type": "string", "minLength": 1 },
     "summary": { "type": "string", "minLength": 1 },
     "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
+    "operationCoverage": { "type": "array", "items": { "$ref": "#/$defs/operationDisposition" } },
     "unconfirmed": { "type": "array", "items": { "$ref": "#/$defs/unconfirmed" } },
     "criteria": { "type": "array", "items": { "$ref": "#/$defs/criterion" } },
     "strengths": { "type": "array", "items": { "type": "string", "minLength": 1 } },
@@ -33,6 +34,21 @@
         "endLine": { "type": "integer", "minimum": 1 },
         "note": { "type": "string" }
       }
+    },
+    "operationDisposition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["topic", "key", "operation", "status", "note"],
+      "properties": {
+        "topic": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "key": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+        "operation": { "type": "string", "minLength": 1, "pattern": "\\S" },
+        "status": { "type": "string", "enum": ["traced", "skipped", "inapplicable"] },
+        "note": { "type": "string", "minLength": 1, "pattern": "\\S" },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } }
+      },
+      "if": { "properties": { "status": { "enum": ["traced", "inapplicable"] } } },
+      "then": { "required": ["evidence"], "properties": { "evidence": { "minItems": 1 } } }
     },
     "finding": {
       "type": "object",

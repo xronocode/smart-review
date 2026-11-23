@@ -14,7 +14,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { CliError, TOOL_VERSION, parseArgs, readJson, writeJson, skillRoot } from './lib/util.mjs';
 import { computeScore, SCORING_VERSION, WEIGHTS, CAPS, MEDIUM_TOTAL_MAX, LOW_TOTAL_MAX } from './lib/score.mjs';
-import { lintRun, checkFile, checkRunMetadata, readExternalAssessment, RULES } from './lib/lint.mjs';
+import { lintRun, checkFile, checkRunMetadata, checkReportOperations, readExternalAssessment, RULES } from './lib/lint.mjs';
 import { diffRuns } from './lib/diff.mjs';
 import { startRun, loadRun, WEB_ASSESSMENT_TOPIC } from './lib/run.mjs';
 import { loadRubric, loadProfiles, listRubrics, reviewCatalog, TOPICS } from './lib/rubrics.mjs';
@@ -115,6 +115,9 @@ function doReport(runDir, flags) {
   if (run.externalAssessments || run.topics?.includes(WEB_ASSESSMENT_TOPIC) || !docIds.length || run.reviewSections?.length === 0) {
     checkRunMetadata({ dir, run }, (rule, message) => { throw new CliError(`${rule}: ${message}`); });
   }
+  checkReportOperations({ dir, run, docs }, (rule, message, section = 'run') => {
+    throw new CliError(`${rule}: ${section}: ${message}`);
+  });
   const lang = flags.lang && flags.lang !== true ? flags.lang : run.lang || 'en';
   const rubrics = Object.fromEntries(docIds.map((id) => [id, loadRubric(id)]));
   const diff = existsSync(join(dir, 'diff.json')) ? readJson(join(dir, 'diff.json')) : null;

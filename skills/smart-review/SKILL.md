@@ -43,6 +43,10 @@ run, show the plan, hand each section to its workflow, and present one result.
 | `frontend` | client/server communication, UI components and design-system use | `workflows/repository.md` |
 | `open-source` | licensing, distribution and contribution paths for external users | `workflows/repository.md` |
 
+A full review maps each internal choice to concrete operations. The report shows which
+operations were traced, skipped or found inapplicable, alongside each section's score.
+Follow `reference/source-coverage.md` for this part of the review.
+
 Run `node <skill-dir>/cli/smart-review.mjs rubrics` for the installed rubrics, profiles
 and topics. A section receives a numeric score when at least one of its criteria was assessed.
 

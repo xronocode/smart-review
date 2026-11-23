@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { main } from '../../skills/smart-review/cli/smart-review.mjs';
-import { commitAll, finding, findingsDoc, makeRepo, read, write } from './helpers.mjs';
+import { commitAll, finding, findingsDoc, fullReviewCoverage, makeRepo, read, write } from './helpers.mjs';
 
 function session(fixture) {
   const root = join(fixture.repo, '.smart-review');
@@ -14,9 +14,13 @@ function session(fixture) {
   };
   const finish = run => main(['finish', run.runDir, '--repo', fixture.repo], () => {});
   const inspect = run => {
+    const full = run.profile === 'full' ? fullReviewCoverage(run.repo.commit) : null;
+    if (full) write(join(run.runDir, 'recon.json'), full.recon);
     for (const id of run.reviewSections) {
       const findings = id === 'security' ? [finding(1, { topics: ['secrets', 'authn'] })] : [];
-      write(join(run.runDir, `${id}.findings.json`), findingsDoc(id, run.repo.commit, findings));
+      const doc = findingsDoc(id, run.repo.commit, findings);
+      if (full) doc.operationCoverage = full.coverage[id];
+      write(join(run.runDir, `${id}.findings.json`), doc);
     }
   };
   const index = () => read(join(root, 'index.json')).runs;
@@ -42,6 +46,11 @@ test('full then secrets and tests publishes a complete report only after success
     assert.equal(index().at(-1).dir, baseline.dir);
     assert.equal(readFileSync(join(full.runDir, 'report.html'), 'utf8'), fullReport);
     inspect(retry);
+    const { recon, coverage } = fullReviewCoverage(fixture.commit);
+    const selected = row => row.topic === 'secrets';
+    write(join(retry.runDir, 'recon.json'), { ...recon, operationInventory: recon.operationInventory.filter(selected) });
+    const reviewedSecurity = join(retry.runDir, 'security.findings.json');
+    write(reviewedSecurity, { ...read(reviewedSecurity), operationCoverage: coverage.security.filter(selected) });
     assert.equal(main(['score', retry.runDir], () => {}), 0);
     assert.equal(main(['report', retry.runDir], () => {}), 0);
     assert.equal(index().at(-1).dir, baseline.dir);
@@ -55,13 +64,43 @@ test('full then secrets and tests publishes a complete report only after success
     assert.equal(third.carried.hygiene, baseline.dir);
     assert.equal(third.carried.tests, index().at(-1).dir);
     const copied = join(third.runDir, 'hygiene.findings.json');
-    write(copied, { ...read(copied), verdict: 'Altered' });
+    assert.deepEqual(readFileSync(copied), readFileSync(join(full.runDir, 'hygiene.findings.json')));
+    const altered = read(copied);
+    altered.operationCoverage[0].note = 'Edited in the retry.';
+    write(copied, altered);
     inspect(third);
+    const messages = [];
+    assert.equal(main(['report', third.runDir], line => messages.push(line)), 2);
+    assert.match(messages.join('\n'), /CARRIED-SOURCE/);
     assert.equal(finish(third), 1);
     assert.equal(index().length, 2);
   } finally {
     fixture.cleanup();
   }
+});
+
+test('carry verifies dispositions against the inventory of the original published inspection', t => {
+  const fixture = makeRepo();
+  t.after(fixture.cleanup);
+  const { start, inspect, finish, index } = session(fixture);
+  const full = start('--profile', 'full');
+  inspect(full);
+  assert.equal(finish(full), 0);
+  const original = join(full.runDir, 'security.findings.json');
+  const doc = read(original);
+  doc.operationCoverage = doc.operationCoverage.filter(row => row.topic !== 'authn');
+  write(original, doc);
+  const retry = start('--sections', 'tests');
+  inspect(retry);
+  const messages = [];
+  assert.equal(main(['report', retry.runDir], line => messages.push(line)), 2);
+  assert.match(messages.join('\n'), /CARRIED-SOURCE.*authn/);
+  const copied = join(retry.runDir, 'security.findings.json');
+  const checked = [];
+  assert.equal(main(['check', copied, '--repo', fixture.repo], line => checked.push(line)), 1);
+  assert.match(checked.join('\n'), /CARRIED-SOURCE.*authn/);
+  assert.equal(finish(retry), 1);
+  assert.equal(index().length, 1);
 });
 
 test('overlapping attempts cannot replace a newer result and another commit never inherits scores', () => {

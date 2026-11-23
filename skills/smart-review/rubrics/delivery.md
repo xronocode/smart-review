@@ -1,6 +1,6 @@
 ---
 id: delivery
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Delivery section
@@ -20,6 +20,7 @@ Review the route from a proposed change to a merge, package publication or deplo
 3. Write down separately what the maintainer promises, what the workflow schedules, and what actually blocks that transition according to the supplied evidence. For a merge requirement, match the required status name, target branch and applicable exceptions in a supplied effective rules export or equivalent record of enforcement. For publication, trace the dependency on a successful job or approval for that exact route. A successful run establishes one outcome. An approval named in a document establishes a claim.
 4. Follow the candidate forward. Match the tested revision and artifact identifier to the inputs of the publishing job. If a job rebuilds, check what ties the rebuilt output to the checked inputs or verifies it before publication. For concurrent releases check whether a slower, older job can overwrite the selected version.
 5. Read the failure branch and the release instructions together. Identify who can halt rollout, which known-good artifact or fixed version they can select, and how consumers learn which version to use. For a partially completed release, find the point from which the operator can safely resume.
+6. Where signing or promotion moves files between jobs, trace each distinct producer/consumer implementation (for example, shell on macOS and PowerShell on Windows). Work through one successful build's actual directory contents, optional outputs, receipt names, and already occupied destinations. Compare that set with the consumer's glob, checks and output paths. Record which platform branches the cited tests exercise or inspect. A passing source-pattern test establishes only the branch and condition it checks.
 
 ## Evidence rules
 

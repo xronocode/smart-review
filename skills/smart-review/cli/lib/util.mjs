@@ -23,7 +23,7 @@ import { execFileSync } from 'node:child_process';
 import { dirname, resolve, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const TOOL_VERSION = '2.2.0';
+export const TOOL_VERSION = '2.3.0';
 export const skillRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 export class CliError extends Error {}

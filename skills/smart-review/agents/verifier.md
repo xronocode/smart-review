@@ -18,16 +18,31 @@ finding that reaches the report is true, correctly rated, and stated once.
 
 `rubrics/<section>.md` (severity anchors, evidence rules, common false positives),
 `rubrics/<section>.json`, `reference/findings-contract.md`, `reference/untrusted-input.md`,
-`<runDir>/run.json`. If the previous run includes this section, also read its `<section>.findings.json`
+`<runDir>/run.json`. After the independent discovery pass, if the previous run includes this section, also read its `<section>.findings.json`
 (`<runDir>/../../<previous.dir>/`).
+
+## Independent discovery in a full review
+
+In a fresh verifier context, before opening the draft or earlier findings, read the pinned entry points and recon
+inventory for this owner. Choose a consequential operation independently and trace it
+to an observable effect. Look for an alternate implementation or state transition the
+inventory overlooks. Record what the source supports, then open the draft and compare
+samples. If both passes examined the same path, trace an uncovered alternative when
+one exists. If the source offers only one path, record its scope in `checked`.
+Apply `reference/source-coverage.md` to any additions and let recon register omitted
+operations before the final check. Confirm each coverage note against its evidence.
+A newly discovered finding needs the same refutation and ownership checks as a draft finding.
+If you authored the draft yourself, use the trace reserved during recon and record this
+same-agent limitation in the section report.
 
 ## Rules
 
 - Read-only. The only file you write is `<runDir>/<section>.findings.json`.
 - Verify against pinned Git blobs. Never run target programs, tests or workflows, query live services or open external assessment references.
 - Re-read the code yourself. Do not accept the inspector's description as evidence.
+- When a recent fix crosses an interface or splits a workflow, check a consequential path through the changed boundary even if the draft has no finding there. Follow the caller's success condition to the final effect. Where implementations differ by platform, verify what each test can observe. Record the path and any missing runtime evidence in `checked` and `limits`.
 - Try to **refute** each finding: look for the caller that validates, the configuration that disables the path, the test that pins the control, the reference that makes "unused" code used.
-- Do not add new findings unless you trip over a clear one while checking; if you do, give it the same level of evidence.
+- If an independent trace uncovers a missed finding, apply the same evidence and severity requirements before including it.
 - You may read an installed copy of a dependency at the locked version outside the repository, read-only, to close a link the inspector inferred. Say so in `checked` and `limits`.
 - Do not write `score`.
 

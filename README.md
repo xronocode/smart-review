@@ -126,6 +126,8 @@ Look up the 22 choices with `catalog --lang ru` for Russian names or `catalog --
 
 One root cause belongs to one section. For example, `delivery` checks release gates, `dependencies` checks the pinning of CI actions, and `tests` checks whether an assertion catches a regression.
 
+Full reviews list the operations examined for each of the 21 source-review choices, with evidence for completed traces and reasons for gaps.
+
 ## The `changes` section
 
 "Review my changes" stops being one generic glance: the skill reads the diff, picks a

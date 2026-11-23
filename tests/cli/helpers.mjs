@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { reviewCatalog } from '../../skills/smart-review/cli/lib/rubrics.mjs';
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const SKILL = join(ROOT, 'skills', 'smart-review');
@@ -76,6 +77,28 @@ export function findingsDoc(section, commit, findings = [finding(1)], over = {})
     tools: [{ name: 'gitleaks', status: 'absent' }],
     ...over,
   };
+}
+
+// Give each internal topic one inventoried path and each section its own dispositions.
+export function fullReviewCoverage(commit) {
+  const operationInventory = [];
+  const coverage = {};
+  for (const { id, owner, title } of reviewCatalog()) {
+    if (!owner) continue;
+    const row = { topic: id, key: 'app-exports', operation: `App module exports (${title.en})` };
+    operationInventory.push(row);
+    (coverage[owner] ??= []).push({
+      ...row, status: 'traced', note: 'The module exports a constant.',
+      evidence: [{ path: 'src/app.js', line: 1, endLine: 2 }],
+    });
+  }
+  const recon = {
+    schemaVersion: 1, commit, summary: 'Standalone JavaScript module.',
+    languages: [{ name: 'JavaScript', files: 2 }], manifests: [], entryPoints: [{ path: 'src/app.js' }],
+    surfaces: [], tests: { roots: [], commands: [] }, ci: [], docs: [{ path: 'README.md' }],
+    agentFiles: [], excluded: [], tools: [], limits: [], operationInventory,
+  };
+  return { recon, coverage };
 }
 
 export function write(path, value) {

@@ -6,7 +6,7 @@
 // END_MODULE_CONTRACT
 //
 // START_MODULE_MAP
-//   buildSummary - overall score (mean of the sections, capped) and per-section scores for a run
+//   buildSummary - overall and per-section scores, operation coverage and source attempts
 //   renderMarkdown - Markdown report
 //   renderHtml - self-contained HTML report with light and dark themes
 // END_MODULE_MAP
@@ -23,6 +23,7 @@ const capBinds = (summary) => Boolean(summary.overallCap) && summary.overallRaw 
 
 export function buildSummary(run, docs, lang = run.lang) {
   const sections = {};
+  const operationCoverage = { counts: { traced: 0, skipped: 0, inapplicable: 0 }, reportedSections: [], unreportedSections: [] };
   for (const [id, { doc }] of Object.entries(docs)) {
     const counts = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
     const findingTopics = {};
@@ -38,6 +39,17 @@ export function buildSummary(run, docs, lang = run.lang) {
       status: score !== null ? 'scored' : doc.score?.reason ?? 'insufficient-data',
       rubricVersion: doc.rubricVersion, findings: counts, findingTopics, verdict: doc.verdict,
     };
+    if (doc.operationCoverage?.length) {
+      const counts = { traced: 0, skipped: 0, inapplicable: 0 };
+      for (const { status } of doc.operationCoverage) {
+        counts[status]++;
+        operationCoverage.counts[status]++;
+      }
+      sections[id].operationCoverage = { counts, rows: doc.operationCoverage };
+      operationCoverage.reportedSections.push(id);
+    } else {
+      operationCoverage.unreportedSections.push(id);
+    }
   }
   const results = Object.values(sections);
   const values = results.map((a) => a.score).filter((v) => v !== null);
@@ -60,6 +72,7 @@ export function buildSummary(run, docs, lang = run.lang) {
     overall, overallRaw, overallCap: overallCapValue, band: bandOf(overall), overallStatus, coverage,
     topics: run.topics ?? [], reviewed: Object.keys(sections).filter((id) => !Object.hasOwn(carried, id)),
     carried, stale: run.stale ?? {}, sections,
+    ...(operationCoverage.reportedSections.length > 0 && { operationCoverage }),
     ...(run.externalAssessments && { externalAssessments: Object.fromEntries(Object.entries(run.externalAssessments).map(([id, entry]) =>
       [id, { ...entry, statusLabel: labels(lang).externalStatus[entry.status] }])) }),
   };
@@ -83,7 +96,11 @@ function checkedDate(item, L) {
   return ` (${L.asOf}: ${item.asOf === 'unknown' ? L.unknownDate : item.asOf})`;
 }
 
-function reviewDetails(summary, L) {
+function operationCounts(counts, L) {
+  return Object.entries(counts).map(([status, count]) => `${L.operationStatus[status]}: ${count}`).join(' · ');
+}
+
+function reviewDetails(summary, diff, L) {
   const name = (id) => L.sectionNames[id] || id;
   const lines = [];
   if (summary.topics?.length) lines.push(`${L.requestedTopics}: ${summary.topics.join(', ')}`);
@@ -94,6 +111,25 @@ function reviewDetails(summary, L) {
     lines.push(`${L.stale}: ${name(id)} — ${explanation}`);
   }
   if (summary.coverage) lines.push(`${L.coverage}: ${coverageRatio(summary.coverage)}`);
+  if (summary.operationCoverage) {
+    const { counts, unreportedSections } = summary.operationCoverage;
+    lines.push(`${L.operationCoverage} — ${operationCounts(counts, L)}`);
+    if (unreportedSections.length) lines.push(`${L.unreportedOperations}: ${unreportedSections.map(name).join(', ')}`);
+  }
+  if (Object.keys(summary.sections).length) {
+    if (!diff) {
+      lines.push(L.noFindingComparison);
+    } else if (Object.values(diff.sections).every(section => Object.hasOwn(section, 'previouslyUnreviewed'))) {
+      // Older diffs omitted findings in sections that had no prior inspection.
+      const counts = new Map();
+      for (const section of Object.values(diff.sections)) {
+        for (const { status } of section.items) counts.set(status, (counts.get(status) ?? 0) + 1);
+      }
+      const totals = Object.keys(L.status).filter(status => counts.has(status))
+        .map(status => `${L.status[status]} (${counts.get(status)})`);
+      lines.push(`${L.comparedFindings} ${diff.previousCommit.slice(0, 12)}: ${totals.join(' · ') || '0'}`);
+    }
+  }
   return lines;
 }
 
@@ -152,7 +188,7 @@ export function renderMarkdown({ run, docs, rubrics, summary, diff, lang }) {
   o.push(`# ${L.title}: ${markdownText(run.repo.name || '')}`.trim(), '');
   o.push(`**${L.overall}: ${scoreLabel(summary.overall, summary.overallStatus, L)}**${summary.band ? ` (${L.band[summary.band]})` : ''}`, '');
   o.push(`- ${L.commit}: \`${run.repo.commit}\``, `- ${L.branch}: ${codeSpan(run.repo.branch)}`, `- ${L.profile}: ${markdownText(run.profile)}`, `- ${L.date}: ${markdownText(run.startedAt.slice(0, 10))}`,
-    ...reviewDetails(summary, L).map((line) => `- ${markdownText(line)}`), '');
+    ...reviewDetails(summary, diff, L).map((line) => `- ${markdownText(line)}`), '');
   const externalOnly = summary.overallStatus === 'external-only';
   if (!externalOnly) o.push(`### ${L.overallCalc}`, '', ...overallLines(summary, L).map((l) => `- ${l}`), '');
   if (run.repo.dirty) o.push(`> ${L.dirty}`, '');
@@ -171,6 +207,16 @@ export function renderMarkdown({ run, docs, rubrics, summary, diff, lang }) {
   o.push('');
   for (const [id, { doc }] of Object.entries(docs)) {
     o.push(`## ${name(id)} — ${scoreLabel(doc.score?.value, doc.score?.reason, L)}`, '', `**${doc.verdict}**`, '', doc.summary, '');
+    const operations = summary.sections[id].operationCoverage;
+    if (operations) {
+      o.push(`### ${L.operationCoverage}`, '', operationCounts(operations.counts, L), '');
+      if (summary.carried?.[id]) o.push(`${L.carried}: ${codeSpan(summary.carried[id])}`, '');
+      for (const row of operations.rows) {
+        o.push(`- **${L.operationStatus[row.status]}** · ${markdownText(row.operation)} (${codeSpan(row.topic)} / ${codeSpan(row.key)}) — ${markdownText(row.note)}`);
+        if (row.evidence?.length) o.push(`  - ${L.evidence}: ${row.evidence.map(e => codeSpan(ev(e))).join(', ')}`);
+      }
+      o.push('');
+    }
     o.push(`### ${L.findings}`, '');
     if (!doc.findings.length) o.push(L.noFindings, '');
     for (const f of sorted(doc.findings)) {
@@ -270,7 +316,7 @@ export function renderHtml({ run, docs, rubrics, summary, diff, lang }) {
   h.push(`<!doctype html><html lang="${esc(lang)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(L.title)}: ${esc(run.repo.name || '')}</title><style>${CSS}</style></head><body><main>`);
   const overallLabel = scoreLabel(summary.overall, summary.overallStatus, L);
   h.push(`<div class="hero">${ring(summary.overall, summary.band)}<div><h1>${esc(L.title)}: ${esc(run.repo.name || '')}</h1><div class="${summary.band || ''}"><b>${esc(L.overall)}: ${esc(overallLabel)}${summary.band ? ` · ${esc(L.band[summary.band])}` : ''}</b></div><div class="meta"><span>${esc(L.commit)} <code>${esc(run.repo.commit.slice(0, 12))}</code></span><span>${esc(L.branch)} <code>${esc(run.repo.branch)}</code></span><span>${esc(L.profile)}: ${esc(run.profile)}</span><span>${esc(run.startedAt.slice(0, 10))}</span></div></div></div>`);
-  const details = reviewDetails(summary, L);
+  const details = reviewDetails(summary, diff, L);
   if (details.length) h.push(`<ul>${details.map((line) => `<li>${esc(line)}</li>`).join('')}</ul>`);
   const externalOnly = summary.overallStatus === 'external-only';
   if (summary.overall === null && !externalOnly) {
@@ -295,6 +341,18 @@ export function renderHtml({ run, docs, rubrics, summary, diff, lang }) {
     const sc = doc.score;
     h.push(`<section class="sec" id="${esc(id)}"><div class="ahead">${ring(sc?.value, sc?.band, 84)}<div><h2>${esc(name(id))}${sc?.value == null ? ` — ${esc(scoreLabel(null, sc?.reason, L))}` : ''}</h2><span class="note">${esc(L.rubric)} ${esc(doc.rubricVersion)}</span></div></div>`);
     h.push(`<p class="verdict">${esc(doc.verdict)}</p><p>${esc(doc.summary)}</p>`);
+    const operations = summary.sections[id].operationCoverage;
+    if (operations) {
+      h.push(`<h3>${esc(L.operationCoverage)}</h3><p>${esc(operationCounts(operations.counts, L))}</p>`);
+      if (summary.carried?.[id]) h.push(`<p>${esc(L.carried)}: <code>${esc(summary.carried[id])}</code></p>`);
+      h.push('<ul>');
+      for (const row of operations.rows) {
+        h.push(`<li><b>${esc(L.operationStatus[row.status])}</b> · ${esc(row.operation)} (<code>${esc(row.topic)}</code> / <code>${esc(row.key)}</code>) — ${esc(row.note)}`);
+        if (row.evidence?.length) h.push(`<br>${esc(L.evidence)}: ${row.evidence.map(e => `<code>${esc(ev(e))}</code>`).join(', ')}`);
+        h.push('</li>');
+      }
+      h.push('</ul>');
+    }
     h.push(`<h3>${esc(L.findings)}</h3>`);
     if (!doc.findings.length) h.push(`<p class="note">${esc(L.noFindings)}</p>`);
     for (const f of sorted(doc.findings)) {

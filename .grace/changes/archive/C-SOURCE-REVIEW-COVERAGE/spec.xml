@@ -1,0 +1,23 @@
+<GraceChangeSpec graceVersion="4.0" status="applied">
+  <C-SOURCE-REVIEW-COVERAGE>
+    <Summary>Make the breadth of a full source review reproducible and visible by tracking distinct operations and implementations under the existing catalogue.</Summary>
+    <Goals>
+      <Goal>Map applicable source topics to independently implemented operations or contracts before sampling. Trace each selected operation from its entry to the decisive effect and compare ordinary and alternate paths where supported by source.</Goal>
+      <Goal>Give the verifier an independent discovery pass for consequential operations missing from the inspector's sample. Count each verified root cause once and retain explicit gaps.</Goal>
+      <Goal>Measure recovery of pre-registered defects, false positives, additional confirmed roots and review effort on pinned repositories. Use comparable external results only when the revision, topic and source evidence match.</Goal>
+    </Goals>
+    <Constraints>
+      <Constraint>Full repository reviews use the existing catalogue, static committed source, uniquely owned root causes and the existing scoring formula. The web assessment remains external and unscored. Quick reviews and reviews of changes retain their bounded scope.</Constraint>
+      <Constraint>Historic reports must remain readable. Selective reruns preserve the provenance and compatibility of current and carried coverage. An incomplete review can publish if the outstanding work is visible; missing required coverage records cannot be treated as completed work.</Constraint>
+    </Constraints>
+    <NonGoals><NonGoal>Adding a finding quota, modifying release or hosting settings, running target applications, issuing live security probes, or promising superiority from one benchmark.</NonGoal></NonGoals>
+    <AcceptanceCriteria>
+      <Criterion>A new full run records a bounded inventory covering all 21 internal catalogue choices: each has mapped operation families, a source-backed explanation of absence, or an explicit unresolved gap. Families sharing an implementation may share evidence. Distinct platforms, adapters and state owners can be traced independently.</Criterion>
+      <Criterion>Every inventoried item in reviewed scope has a disposition: traced with a pinned evidence reference and observed code outcome, skipped with reason and implication, or inapplicable with evidence. Missing or duplicate dispositions and invalid evidence fail validation; acknowledged gaps remain visible without a fabricated score adjustment.</Criterion>
+      <Criterion>Verification can discover omitted behaviors before reading the draft's conclusions. Verified discoveries are merged under the owning key. Reports show which areas were sampled and which were left uninspected alongside the existing criterion-coverage figure.</Criterion>
+      <Criterion>A paired evaluation uses identical pinned source and equivalent effort limits; report confirmed roots and registered controls, effort, and unresolved leads. Separate retrospective calibration from unseen cases. A superiority claim requires fresh held-out cases, comparable external reports on the same pins, and human-checkable adjudication.</Criterion>
+    </AcceptanceCriteria>
+    <AffectedAreas><M-SECTION-SKILL /><M-SECTION-CLI /><M-SECTION-RUBRICS /></AffectedAreas>
+    <VerificationIntent><ExpectedCommand>make validate</ExpectedCommand><ExpectedCommand>make test</ExpectedCommand><ExpectedEvidence>Full, quick, selective, historical and external-only fixtures; bilingual coverage summaries; source-grounded evaluation with false-positive controls.</ExpectedEvidence></VerificationIntent>
+  </C-SOURCE-REVIEW-COVERAGE>
+</GraceChangeSpec>

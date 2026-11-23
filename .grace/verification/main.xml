@@ -7,11 +7,14 @@
         <File>tests/cli/report.test.mjs</File>
         <File>tests/cli/rerun.test.mjs</File>
         <File>tests/cli/coverage.test.mjs</File>
+        <File>tests/cli/operation-coverage.test.mjs</File>
+        <File>tests/cli/operation-report.test.mjs</File>
         <File>tests/cli/topics.test.mjs</File>
         <File>tests/cli/external.test.mjs</File>
         <File>tests/cli/diff-catalog.test.mjs</File>
       </TestFiles>
       <Command>make test</Command>
+      <Scenario>New full runs cover every internal choice with uniquely owned operation dispositions and pinned evidence. Missing, duplicate or mismatched records block publication. Bounded and historical attempts retain their scope. Reports in both languages distinguish reviewed operations, gaps and carried records.</Scenario>
       <Scenario>The score follows the published weights and caps, ignores info and low-confidence findings, and is idempotent on disk.</Scenario>
       <Scenario>Lint accepts a valid run and rejects evidence missing on the commit, a line out of range, an edited score, a foreign commit, incomplete criteria, empty limits, an unverified finding, and a secret-shaped string.</Scenario>
       <Scenario>A finding of the previous run must be still present or explained; diff separates new findings from ones missed earlier.</Scenario>
@@ -28,7 +31,8 @@
         <File>tests/validate_sections.py</File>
       </TestFiles>
       <Command>make validate</Command>
-      <Scenario>Every file the dispatcher names exists: SKILL.md, both workflows, the reviewer agents of the changes section, the recon, inspector, and verifier prompts, four reference documents, three schemas, and the CLI entry.</Scenario>
+      <Scenario>Every file the dispatcher names exists: SKILL.md, both workflows, the reviewer agents of the changes section, the recon, inspector, and verifier prompts, the required reference documents, three schemas, and the CLI entry.</Scenario>
+      <Scenario>The repository workflow routes recon, inspection and independent verification through the source coverage guide.</Scenario>
       <Scenario>The skill name in SKILL.md is smart-review, so installs made before the plugin upgrade in place.</Scenario>
       <Scenario>The dispatcher resolves natural-language topics into the full owner sections and the workflow inspects only reviewSections, disclosing carried results.</Scenario>
       <Scenario>The scoring reference states the same formula, caps, and scoring version as the CLI.</Scenario>

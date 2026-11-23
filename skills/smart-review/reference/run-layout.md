@@ -30,6 +30,12 @@ The `full` profile selects ten sections. Recon determines the applicability of t
 criteria. The `quick` profile selects security, tests and dependencies. A source topic selects
 one full owner rubric, shared by all requested topics with that owner.
 
+Full runs started with version 2.3.0 or later require an operation inventory and a
+disposition for every reviewed operation. See [source coverage](source-coverage.md).
+Quick or explicitly selected scopes can omit the inventory. Carried sections retain
+the coverage recorded by their source attempt. Old reports do not establish how
+many operations were traced.
+
 For an external-only report use `start --repo . --topics web-pentest`. To also review
 public API access, use `start --repo . --topics web-pentest,api-access`. Append
 `--external-assessment <file.json>` to supply metadata for a previously performed

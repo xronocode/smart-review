@@ -44,6 +44,7 @@ test('finish writes summary, Markdown, and one self-contained HTML file', () => 
     assert.ok(html.includes('src/app.js:3'));
     const md = readFileSync(join(fx.run.runDir, 'report.md'), 'utf8');
     assert.ok(md.includes('**Overall score: 69/100**'));
+    for (const report of [md, html]) assert.ok(report.includes('no finding-by-finding comparison with an earlier commit'));
     assert.ok(md.includes('### Overall score calculation'));
     assert.ok(md.includes('Mean of the sections that ran: 88'));
     assert.ok(md.includes('Cap applied: a high finding caps the overall score at 69 → 69'));

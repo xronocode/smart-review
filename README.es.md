@@ -128,6 +128,8 @@ Consulta las 22 opciones con `catalog --lang ru` para ver sus nombres en ruso o 
 
 Cada causa raíz corresponde a una sola sección. Por ejemplo, delivery se ocupa de los controles de publicación, dependencies de la fijación de versiones de acciones de CI y tests de si una aserción detecta una regresión.
 
+La revisión completa muestra qué operaciones se examinaron en cada una de las 21 opciones de revisión de código, las líneas que sustentan los resultados y qué quedó pendiente.
+
 ## La sección `changes`
 
 «Revisa mis cambios» (review my changes) deja de ser un vistazo genérico: la skill lee el

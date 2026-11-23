@@ -1,7 +1,7 @@
 <GraceGraphDocument graceVersion="4.0">
   <GD-MAIN>
     <M-SECTION-CLI>
-      <Summary>Dependency-free Node CLI for a bilingual review catalogue, commit-bound attempts, external assessment metadata, coverage-aware scoring, lint and publication with section provenance.</Summary>
+      <Summary>Dependency-free Node CLI for a bilingual review catalogue, commit-bound attempts, external assessment metadata, operation inventory, verified coverage, scoring and publication with section provenance.</Summary>
       <Path>skills/smart-review/cli/smart-review.mjs</Path>
       <Path>skills/smart-review/cli/lib/util.mjs</Path>
       <Path>skills/smart-review/cli/lib/validate.mjs</Path>
@@ -15,15 +15,16 @@
       <M-SECTION-RUBRICS />
     </M-SECTION-CLI>
     <M-SECTION-SKILL>
-      <Summary>The smart-review skill: the section dispatcher in SKILL.md, the changes workflow (diff review modes and reviewer agents), the repository workflow for scored sections (recon, inspector, and verifier agent prompts), reference documents for the findings contract, scoring, untrusted input, and run layout, and the JSON Schemas of run artifacts.</Summary>
+      <Summary>The smart-review skill: the section dispatcher in SKILL.md, the changes workflow (diff review modes and reviewer agents), the repository workflow for scored sections (recon, inspector, and verifier agent prompts), reference documents for independent source discovery, findings, scoring, untrusted input, and run layout, and the JSON Schemas of run artifacts.</Summary>
       <Path>skills/smart-review/SKILL.md</Path>
       <Path>skills/smart-review/workflows/changes.md</Path>
       <Path>skills/smart-review/workflows/repository.md</Path>
+      <Path>skills/smart-review/reference/source-coverage.md</Path>
       <M-SECTION-CLI />
       <M-SECTION-RUBRICS />
     </M-SECTION-SKILL>
     <M-SECTION-RUBRICS>
-      <Summary>Versioned methods, evidence standards and criteria for ten repository sections, including delivery, integrations, database queries, frontend and open-source readiness. Profiles specify which sections to consider.</Summary>
+      <Summary>Versioned methods, evidence standards and criteria for ten repository sections, including release gates, external integrations, file-backed queries, frontend and open-source readiness. Profiles specify which sections to consider.</Summary>
       <Path>skills/smart-review/rubrics/profiles.json</Path>
     </M-SECTION-RUBRICS>
     <M-SECTION-PLUGIN>

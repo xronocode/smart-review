@@ -1,6 +1,6 @@
 {
   "name": "@xronocode/smart-review",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Section-based review of a repository and its changes for coding agents, with a CLI for deterministic scoring, machine verification, run comparison, and reports.",
   "license": "MIT",
   "type": "module",

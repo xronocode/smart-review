@@ -16,6 +16,14 @@ def fail(msg):
     errors.append(msg)
 
 
+coverage_reference = "reference/source-coverage.md"
+if not (root / coverage_reference).is_file():
+    fail(f"{coverage_reference} is missing")
+for guide in ("SKILL.md", "workflows/repository.md", "agents/recon.md", "agents/inspector.md", "agents/verifier.md"):
+    if coverage_reference not in (root / guide).read_text(encoding="utf-8"):
+        fail(f"{guide} does not route full reviews to {coverage_reference}")
+
+
 rubrics = {}
 for jf in sorted((root / "rubrics").glob("*.json")):
     if jf.name == "profiles.json":
