@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The delivery rubric (1.2.0) adds `artifact-admission-coverage` and `release-channel-integrity`: per-artifact functional admission checks and release-channel consistency across lanes, re-publishes and check-name collisions. Inspectors get a negative-space method for absent-control findings.
+
 ## v2.3.0 — 2026-11-23
 
 - Full reviews inventory operations for all 21 internal catalogue choices at the reviewed commit. Reports list traced operations with evidence, explain gaps and identify coverage carried from earlier attempts.
