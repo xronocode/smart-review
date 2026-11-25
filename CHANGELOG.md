@@ -1,4 +1,6 @@
-# Changelog
+## Unreleased
+
+- The integrations rubric (1.2.0) adds `result-verdict-determinism` and `consent-failure-degradation`: determined, attributable verdicts on timeouts and shared-inbox attribution, and honest artifact degradation when a consented external fetch fails.
 
 ## Unreleased
 
