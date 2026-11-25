@@ -1,6 +1,6 @@
 ---
 id: delivery
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Delivery section
@@ -21,11 +21,14 @@ Review the route from a proposed change to a merge, package publication or deplo
 4. Follow the candidate forward. Match the tested revision and artifact identifier to the inputs of the publishing job. If a job rebuilds, check what ties the rebuilt output to the checked inputs or verifies it before publication. For concurrent releases check whether a slower, older job can overwrite the selected version.
 5. Read the failure branch and the release instructions together. Identify who can halt rollout, which known-good artifact or fixed version they can select, and how consumers learn which version to use. For a partially completed release, find the point from which the operator can safely resume.
 6. Where signing or promotion moves files between jobs, trace each distinct producer/consumer implementation (for example, shell on macOS and PowerShell on Windows). Work through one successful build's actual directory contents, optional outputs, receipt names, and already occupied destinations. Compare that set with the consumer's glob, checks and output paths. Record which platform branches the cited tests exercise or inspect. A passing source-pattern test establishes only the branch and condition it checks.
+7. Admission controls are negative-space evidence. Enumerate the artifact types the route ships and, for each, the admission control that runs on that exact build before it can ship. An absent control is found by comparing the shipped artifact inventory with the controls each artifact runs, then citing the pipeline steps that build and ship an artifact whose admission is missing. A control of a different artifact type does not close the gap. The same comparison covers version parity between the artifact and the ref it was built from, per lane.
+
 
 ## Evidence rules
 
 - Include the route and revision or artifact in `checked`. A gate finding needs lines for the promised or configured check, its controlling condition or dependency, and the affected transition. For a promotion or rollback finding cite the producer and consumer or the failing recovery step. Describe the change that would close the evidenced gap.
 - Use commit-relative paths and lines for findings. Identify any supplied host evidence and its scope in the note. If merge is the only applicable gate and host policy is unavailable, mark `gate-enforcement` as `unknown`. If a publish gate can be assessed independently, score the evidenced gate and record merge enforcement as unknown in its note and in `limits`. A demonstrated scheduling defect belongs under `check-coverage`.
+- For an absent-control finding, cite the inventory of shipped artifact types, the control each one runs, and the build and publish steps that ship the artifact without the control. Anchor the finding on those steps; the absence itself has no line to cite.
 - Use `na` when recon and the tracked release model establish that a transition does not exist, e.g. deployment rollback for a source-only reference distributed as immutable revisions. An undocumented process for a shipped product is a limit or a gap in a specific promise. A missing workflow filename alone settles neither. Give the uninspected routes and the effect on the verdict in `limits`.
 
 ## Severity anchors
@@ -42,6 +45,12 @@ Compare a concrete changed path and ref with the workflow filters, matrix and in
 
 ### `gate-enforcement` — Required results and approvals control promotion
 For each sampled transition name the blocking result, the revision it covers and the decision that consumes it. Rate the controls supported by evidence and identify any transition whose enforcement remains unknown.
+
+### `artifact-admission-coverage` — Every shipped artifact type passes a functional admission check of that exact build
+Enumerate the artifact types the pipeline ships and the admission control each one runs on its own build: functional launch or package verification, not only static checks. When an artifact type ships without an admission control of its own build, cite the build and publish steps that move it to users. A smoke check of a different artifact does not close the gap.
+
+### `release-channel-integrity` — Release channel state stays consistent with the published artifact across lanes and re-runs
+Compare the version inside each installer with the tag or ref it was built from, per lane, including prerelease lanes. Check that a re-publish of an already released artifact reasserts the update-channel state instead of skipping it, and that no two admission checks report under one required-context name, so consumers can always resolve which run satisfied the gate.
 
 ### `artifact-promotion` — The published artifact matches the checked candidate
 Trace the build ID, digest, version or equivalent through transfer and selection. Inspect mutable references, reruns and concurrent jobs when they can change which candidate is published.

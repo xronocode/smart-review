@@ -76,6 +76,8 @@ extend the inventory before you check the draft.
 4. Assign severity from the rubric's anchors and confidence from how much of the path you read.
 5. A lead that was `unconfirmed` in the previous run and that you can now prove becomes a finding with a new key and `origin: "missed-earlier"`; say in `checked` that it was promoted. Carry the other previous `unconfirmed` items over, or say in `checked` why one was dropped.
 6. Fill every criterion: `scored` with 0–5, `na` with a reason, or `unknown` with what is missing.
+8. Admission and coverage criteria are negative-space checks. Build the expected control set from the route's own artifact and route inventory, then evidence an absent control by citing the steps that build and ship the artifact without it. Mark the criterion `scored` with the evidenced gaps; use `na` only when the artifact type does not exist on the route.
+
 7. Write `verdict`, `summary`, `strengths`, `checked`, `limits`, `tools`. `tools` is `[]` when the rubric names no optional tool.
 
 ## Output

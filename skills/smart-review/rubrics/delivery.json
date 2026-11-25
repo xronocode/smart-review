@@ -1,6 +1,6 @@
 {
   "id": "delivery",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "title": {
     "en": "Delivery",
     "ru": "Доставка изменений"
@@ -23,6 +23,20 @@
       "title": {
         "en": "Required results and approvals control promotion",
         "ru": "Переход на следующий этап зависит от обязательных проверок и согласований"
+      }
+    },
+    {
+      "id": "artifact-admission-coverage",
+      "title": {
+        "en": "Every shipped artifact type passes a functional admission check of that exact build",
+        "ru": "Каждый поставляемый тип артефакта проходит функциональную проверку именно этой сборки"
+      }
+    },
+    {
+      "id": "release-channel-integrity",
+      "title": {
+        "en": "Release channel state stays consistent with the published artifact across lanes and re-runs",
+        "ru": "Состояние канала релиза остаётся согласованным с опубликованным артефактом между линиями и повторными запусками"
       }
     },
     {
