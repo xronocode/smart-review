@@ -1,6 +1,6 @@
 ---
 id: integrations
-version: 1.1.0
+version: 1.2.0
 ---
 
 # External integration reliability section
@@ -15,6 +15,7 @@ Inspect first-party callers and consumers at an independently operated service b
 
 ## Method
 
+- For consented fetches, follow the consent decision into the artifact write on the success path, the refusal path and the failure path between them: what the artifact contains when the fetch fails after the user consented. For every outbound operation with a deadline, check what the caller receives when the deadline fires: a named undetermined or failed verdict attributable to that operation, never an undefined value. Check that acknowledgement and result inboxes key entries by the provider or extension identity, so parallel operations cannot consume another party's verdict.
 For a locally hosted API that serves independently installed extensions, include an extension-initiated operation. Trace its success reply through any event or queue to the consumer that applies the operation. Check which target identity and completion signal the contract requires. A documented acceptance-only reply can legitimately precede completion. For a fallback, trace the primary and backup through to the resource they deliver and identify shared dependencies that survive the switch.
 
 1. From recon's surfaces, entry points and manifests, identify reachable provider operations and their owners. Trace one important read and one state-changing operation where present. Include one asynchronous completion path if the caller delegates the result to a webhook or worker. Record the operation, provider and count sampled.
@@ -39,6 +40,13 @@ For a locally hosted API that serves independently installed extensions, include
 
 ### `provider-outcomes` — Provider outcomes reach the correct caller state
 Read the mapping for meaningful success, rejection, throttling and malformed or partial replies. Trace a degraded response to a caller that can distinguish it from an empty valid result.
+
+
+### `result-verdict-determinism` — Every outbound operation ends in a determined verdict attributable to its provider
+For each outbound operation, check what the caller receives when the operation times out or the transport dies mid-call: an explicit undetermined or failed verdict naming the operation, or an undefined value that leaves the caller guessing. Check that acknowledgements and result inboxes key entries by the provider or extension identity, so parallel operations cannot consume another party's verdict.
+
+### `consent-failure-degradation` — A consented external fetch that fails degrades the artifact honestly instead of silently dropping content
+Trace the consented fetch into the artifact write on all three paths: success, refusal, and failure in between. On failure the artifact must keep the same honest fallback the refusal path uses (pinned source or placeholder), with a notice naming what was skipped. A silent drop of consented content is a finding; compare the sibling paths for parity.
 
 ### `attempt-budget` — Waiting and repeated attempts are bounded
 Account for deadlines, cancellation and backoff across the client and worker together. Inspect whether a permanent error still consumes the transient retry budget.

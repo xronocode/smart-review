@@ -1,6 +1,6 @@
 {
   "id": "integrations",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "title": {
     "en": "External integration reliability",
     "ru": "Надёжность внешних интеграций"
@@ -16,6 +16,20 @@
       "title": {
         "en": "Provider outcomes reach the correct caller state",
         "ru": "Результат вызова внешнего сервиса корректно отражается в состоянии операции"
+      }
+    },
+    {
+      "id": "result-verdict-determinism",
+      "title": {
+        "en": "Every outbound operation ends in a determined verdict attributable to its provider",
+        "ru": "Каждая исходящая операция завершается определённым вердиктом, соотнесённым со своим провайдером"
+      }
+    },
+    {
+      "id": "consent-failure-degradation",
+      "title": {
+        "en": "A consented external fetch that fails degrades the artifact honestly instead of silently dropping content",
+        "ru": "Согласованная внешняя загрузка при сбое честно деградирует артефакт вместо тихой потери содержимого"
       }
     },
     {
